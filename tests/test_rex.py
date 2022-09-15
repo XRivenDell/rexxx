@@ -9,11 +9,10 @@ import logging
 
 # Make sure to use our own code
 sys.path.insert(0,"/home/wsl/angr-dev/rex/")
-print(sys.path)
+# print(sys.path)
 # sys.path.insert(1,"../../")
 
 import rex
-
 import archr
 import colorguard
 from rex.vulnerability import Vulnerability
@@ -22,7 +21,7 @@ from rex.exploit.cgc.type1.cgc_type1_shellcode_exploit import CGCType1ShellcodeE
 
 from IPython import embed
 
-bin_location = str(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../binaries'))
+bin_location = str(os.path.join(os.path.dirname(os.path.realpath(__file__)), '../my_binaries'))
 cache_location = str(os.path.join(bin_location, 'tests_data/rop_gadgets_cache'))
 tests_dir = str(os.path.dirname(os.path.realpath(__file__)))
 
@@ -495,7 +494,8 @@ def test_linux_armel():
     # Test exploiting a simple linux program with a stack buffer overflow. We should be able to exploit the test binary by
     # ropping to 'system', calling shellcode in the BSS and calling 'jmpsp' shellcode in the BSS.
 
-    path = os.path.join(bin_location, "tests/armel")
+    # path = os.path.join(bin_location, "tests/armel")
+    path = bin_location
     bin_path = os.path.join(path, "vuln_stacksmash")
     ld_path = os.path.join(path, "ld-linux.so.3")
     libc_path = os.path.join(path,"libc.so.6")
@@ -528,7 +528,8 @@ def test_linux_armel_stacksmash_shell():
     # Test exploiting a simple linux program with a stack buffer overflow. We should be able to exploit the test binary by
     # ropping to 'system', calling shellcode in the BSS and calling 'jmpsp' shellcode in the BSS.
 
-    path = os.path.join(bin_location, "tests/armel")
+    # path = os.path.join(bin_location, "tests/armel")
+    path = bin_location
     bin_path = os.path.join(path, "vuln_stacksmash_withshell")
     ld_path = os.path.join(path, "ld-linux.so.3")
     libc_path = os.path.join(path,"libc.so.6")
@@ -541,6 +542,8 @@ def test_linux_armel_stacksmash_shell():
     # qemu_command = 'qemu-arm -L %s %s %s' % (bin_path)
     lib_path = path
     inp = b"A" * 0x100
+
+    input("Let's go to run "+str(path))
     with archr.targets.LocalTarget([ld_path, '--library-path', lib_path, bin_path], bin_path, target_arch='arm').build().start() as target:
         # embed()
         print("Success")

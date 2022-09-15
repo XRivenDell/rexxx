@@ -628,7 +628,7 @@ class Crash(CommCrash):
         # for backward compatibility, inputs are specified in Crash
         super().__init__(target, crash=crash, pov_file=pov_file, actions=actions, **kwargs)
 
-        ipdb.set_trace()
+        # ipdb.set_trace()
 
         self.use_crash_input = use_crash_input
         self.crash_types = [ ]  # crash type
