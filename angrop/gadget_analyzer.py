@@ -13,7 +13,6 @@ from .errors import RopException, RegNotFoundException
 l = logging.getLogger("angrop.gadget_analyzer")
 
 
-
 class GadgetAnalyzer:
     def __init__(self, project, fast_mode, arch=None, stack_length=80):
         # params
@@ -32,7 +31,7 @@ class GadgetAnalyzer:
         self._base_pointer = self.project.arch.register_names[self.project.arch.bp_offset]
         self._sp_reg = self.project.arch.register_names[self.project.arch.sp_offset]
 
-    @rop_utils.timeout(3)
+    # @rop_utils.timeout(3)
     def analyze_gadget(self, addr):
         """
         :param addr: address to analyze for a gadget
@@ -41,6 +40,7 @@ class GadgetAnalyzer:
         l.info("Analyzing 0x%x", addr)
 
         # first check if the block makes sense
+        # import ipdb; ipdb.set_trace();
         if not self._block_makes_sense(addr):
             return None
 
@@ -164,7 +164,11 @@ class GadgetAnalyzer:
         try:
             l.debug("... checking if block makes sense")
             block = self.project.factory.block(addr)
+            # print(block)
 
+            '''
+            REVIEW: frist go to every arch to check the block
+            '''
             if not self.arch.block_make_sense(block):
                 return False
 

@@ -11,9 +11,8 @@ import logging
 l = logging.getLogger("angrop.tests.test_rop")
 
 from IPython import embed
-import ipdb
 
-public_bin_location = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../binaries/tests')
+public_bin_location = os.path.join(os.path.dirname(os.path.realpath(__file__)), '../../my_binaries/')
 test_data_location = os.path.join(public_bin_location, "..", "tests_data", "angrop_gadgets_cache")
 
 
@@ -155,8 +154,9 @@ def test_rop_i386_cgc():
 
 def test_rop_arm():
     # print("what?")
-    b = angr.Project(os.path.join(public_bin_location, "armel/manysum"), load_options={"auto_load_libs": False})
+    b = angr.Project(os.path.join(public_bin_location, "manysum"), load_options={"auto_load_libs": False})
     rop = b.analyses.ROP()
+    import ipdb; ipdb.set_trace();
     rop.find_gadgets_single_threaded(show_progress=False)
 
 
@@ -165,7 +165,6 @@ def test_rop_arm():
     # compare_gadgets(rop.gadgets, test_gadgets)
 
     # test creating a rop chain
-    embed()
 
     chain = rop.set_regs(r11=0x99887766)
     # smallest possible chain
@@ -218,6 +217,38 @@ def run_all():
         if hasattr(all_functions[f], '__call__'):
             all_functions[f]()
 
+def test_rop_arm_new():
+        # print("what?")
+    # b = angr.Project(os.path.join(public_bin_location, "manysum"), load_options={"auto_load_libs": False})
+    b = angr.Project(os.path.join(public_bin_location, "vuln_stacksmash_withshell"), load_options={"auto_load_libs": False})
+    rop = b.analyses.ROP()
+    # embed()
+    # import ipdb; ipdb.set_trace();
+    rop.find_gadgets_single_threaded(show_progress=False)
+
+    embed()
+
+
+    # # check gadgets
+    # test_gadgets, _ = pickle.load(open(os.path.join(test_data_location, "arm_manysum_test_gadgets"), "rb"))
+    # compare_gadgets(rop.gadgets, test_gadgets)
+
+    # test creating a rop chain
+
+    # chain = rop.set_regs(r11=0x99887766)
+    # # smallest possible chain
+    # assert chain.payload_len == 8
+    # # correct chains, using a more complicated chain here
+    # chain = rop.set_regs(r4=0x99887766, r9=0x44556677, r11=0x11223344)
+    # result_state = execute_chain(b, chain)
+    # assert result_state.solver.eval(result_state.regs.r4) == 0x99887766
+    # assert result_state.solver.eval(result_state.regs.r9) == 0x44556677
+    # assert result_state.solver.eval(result_state.regs.r11) == 0x11223344
+
+    # # test memwrite chain
+    # chain = rop.write_to_mem(0x41414141, b"ABCDEFGH")
+    # result_state = execute_chain(b, chain)
+    # assert result_state.solver.eval(result_state.memory.load(0x41414141, 8), cast_to=bytes) == b"ABCDEFGH"
 
 if __name__ == "__main__":
     logging.getLogger("angrop.rop").setLevel(logging.DEBUG)
@@ -227,4 +258,4 @@ if __name__ == "__main__":
     #     globals()['test_' + sys.argv[1]]()
     # else:
     #     run_all()
-    test_rop_arm()
+    test_rop_arm_new()

@@ -7,11 +7,19 @@ class ROPArch:
         self.project = project
         self.max_sym_mem_access = 4
         self.alignment = project.arch.instruction_alignment
+        # REVIEW: self.alignment*8 no sense....
+        # it should considerate jump process progarm flow
+
+        # HACK: What the fuck with max_block_size, it's really stupid to use that 
+        # to certain the length of ropgadget
+        # Reference: RopGadgets or ropper or rp++
         self.max_block_size = self.alignment * 8
         self.reg_list = self._get_reg_list()
 
         a = project.arch
         self.base_pointer = a.register_names[a.bp_offset]
+
+        # self.disengine = project.arch.capstone
 
     def _get_reg_list(self):
         """
@@ -35,6 +43,9 @@ class X86(ROPArch):
         self.max_block_size = 20 # X86 and AMD64 have alignment of 1, 8 bytes is certainly not good enough
 
     def block_make_sense(self, block):
+        """
+        TODO: check the block is a;; oh no need
+        """
         capstr = str(block.capstone).lower()
         if 'cli' in capstr or 'rex' in capstr or "fs:" in capstr or "gs:" in capstr:
             return False
@@ -43,6 +54,9 @@ class X86(ROPArch):
         return True
 
 class AMD64(X86):
+    pass
+
+class PPC(ROPArch):
     pass
 
 arm_conditional_postfix = ['eq', 'ne', 'cs', 'hs', 'cc', 'lo', 'mi', 'pl',
@@ -56,16 +70,25 @@ class ARM(ROPArch):
     def block_make_sense(self, block):
         # disable conditional jumps, for now
         # FIXME: we should handle conditional jumps, they are useful
+        # print(block)
         for insn in block.capstone.insns:
             if insn.insn.mnemonic[-2:] in arm_conditional_postfix:
                 return False
         return True
+
+    """
+    TODO: Reference Ropgadgets need more type of gadgets
+    """
         
 class MIPS(ROPArch):
+    """
+    Add MIPS support
+    """
     pass
 
 def get_arch(project):
     name = project.arch.name
+    print(name)
     if name == 'X86':
         return X86(project)
     elif name == 'AMD64':

@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 void shell(){
     system("/bin/sh\x00");
-    return 0;
 }
 
 int main(){

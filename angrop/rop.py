@@ -8,6 +8,7 @@ from . import chain_builder
 from . import gadget_analyzer
 from . import common
 from .arch import get_arch
+from .rop_force import GetAddrFromROPgadget
 
 import pickle
 import inspect
@@ -84,6 +85,7 @@ class ROP(Analysis):
 
         # get ret locations
         self._ret_locations = None
+        self._ropgadget_locations = None
 
         # list of RopGadget's
         self._gadgets = []
@@ -180,10 +182,12 @@ class ROP(Analysis):
         Saves stack pivots in self.stack_pivots
         """
         self._initialize_gadget_analyzer()
+        self._address_from_ropforce()
         self._gadgets = []
 
         _set_global_gadget_analyzer(self._gadget_analyzer)
         for _, addr in enumerate(self._addresses_to_check_with_caching(show_progress)):
+            # print(addr)
             gadget = _global_gadget_analyzer.analyze_gadget(addr)
             if gadget is not None:
                 if isinstance(gadget, RopGadget):
@@ -307,8 +311,10 @@ class ROP(Analysis):
         num_addrs = self._num_addresses_to_check()
         self._cache = {}
         seen = {}
-
-        iterable = self._addresses_to_check()
+        import ipdb; ipdb.set_trace()
+        # iterable = self._addresses_to_check()
+        iterable = self._more_addresses_to_check()
+        print(iterable)
         if show_progress:
             iterable = tqdm.tqdm(iterable=iterable, smoothing=0, total=num_addrs,
                                  desc="ROP", maxinterval=0.5, dynamic_ncols=True)
@@ -316,9 +322,11 @@ class ROP(Analysis):
         for a in iterable:
             try:
                 bl = self.project.factory.block(a)
-                if bl.size > self.arch.max_block_size:
-                    continue
+                # HACK: I don't think it's useful
+                # if bl.size > self.arch.max_block_size:
+                #     continue
                 block_data = bl.bytes
+                # print(hex(a), block_data)
             except (SimEngineError, SimMemoryError):
                 continue
             if block_data in seen:
@@ -356,7 +364,51 @@ class ROP(Analysis):
                     l.debug("Analyzing segment with address range: 0x%x, 0x%x" % (segment.min_addr, segment.max_addr))
                     for addr in range(segment.min_addr, segment.max_addr):
                         yield addr
+                        
+    def _more_addresses_to_check(self):
+        """
+        :return: all the addresses to check
+        contain ropgadgets content
+        """
+        # if self._only_check_near_rets:
+            # align block size
+        alignment = self.arch.alignment
+        block_size = (self.arch.max_block_size & ((1 << self.project.arch.bits) - alignment)) + alignment
+        slices = [(addr-block_size, addr) for addr in self._ret_locations]
+        # print(slices)
+        slices.extend(self._ropgadget_locations)
+        slices = set(slices)
+        print(slices)
 
+        current_addr = 0
+        for st, ed in slices:
+            current_addr = max(current_addr, st)
+            if ed == st+block_size:
+                end_addr = st + block_size + alignment
+            else:
+                end_addr = ed
+            # print(current_addr,end_addr)
+            for i in range(current_addr, end_addr, alignment):
+                segment = self.project.loader.main_object.find_segment_containing(i)
+                if segment is not None and segment.is_executable:
+                    print(hex(i))
+                    yield i
+            current_addr = max(current_addr, end_addr)
+        # else:
+        #     for segment in self.project.loader.main_object.segments:
+        #         if segment.is_executable:
+        #             l.debug("Analyzing segment with address range: 0x%x, 0x%x" % (segment.min_addr, segment.max_addr))
+        #             for addr in range(segment.min_addr, segment.max_addr):
+        #                 yield addr
+
+    def _address_from_ropforce(self):
+        # import ipdb; ipdb.set_trace();
+        addrs = GetAddrFromROPgadget(self.project.filename)
+        self._ropgadget_locations= addrs
+        # self._more_addresses_to_check()
+        print(self._ropgadget_locations)
+        return addrs
+    
     def _num_addresses_to_check(self):
         if self._only_check_near_rets:
             # TODO: This could probably be optimized further by fewer segments checks (i.e. iterating for segments and

@@ -1,3 +1,5 @@
+from .arch import ROPArch,X86,ARM,MIPS,PPC
+
 class RopMemAccess:
     """Holds information about memory accesses
     Attributes:
@@ -59,8 +61,27 @@ class RopRegMove:
             return False
         return self.from_reg == other.from_reg and self.to_reg == other.to_reg and self.bits == other.bits
 
+class StackPivot:
+    """
+    stack pivot gadget
+    """
+    def __init__(self, addr):
+        self.addr = addr
+        self.sp_from_reg = None
+        self.sp_popped_offset = None
 
-class RopGadget:
+    def __str__(self):
+        s = "Pivot %#x\n" % self.addr
+        if self.sp_from_reg is not None:
+            s += "sp from reg: %s\n" % self.sp_from_reg
+        elif self.sp_popped_offset is not None:
+            s += "sp popped at %#x\n" % self.sp_popped_offset
+        return s
+
+    def __repr__(self):
+        return "<Pivot %#x>" % self.addr
+
+class RopGadget():
     """
     Gadget objects
     """
@@ -84,6 +105,7 @@ class RopGadget:
         self.jump_reg = None
 
         self.pc_reg = None
+        self.capstr = ""
 
     @property 
     def is_pc_reg():
@@ -153,6 +175,8 @@ class RopGadget:
 
     def __repr__(self):
         return "<Gadget %#x>" % self.addr
+    
+    # def 
 
     def copy(self):
         out = RopGadget(self.addr)
@@ -176,23 +200,10 @@ class RopGadget:
         out.pc_reg = self.pc_reg
         return out
 
+# class ArmRopGadget(RopGadget):
 
-class StackPivot:
-    """
-    stack pivot gadget
-    """
-    def __init__(self, addr):
-        self.addr = addr
-        self.sp_from_reg = None
-        self.sp_popped_offset = None
-
-    def __str__(self):
-        s = "Pivot %#x\n" % self.addr
-        if self.sp_from_reg is not None:
-            s += "sp from reg: %s\n" % self.sp_from_reg
-        elif self.sp_popped_offset is not None:
-            s += "sp popped at %#x\n" % self.sp_popped_offset
-        return s
-
-    def __repr__(self):
-        return "<Pivot %#x>" % self.addr
+#     def __init__(self):
+#         pass
+    
+#     def __repr__(self):
+#         pass

@@ -12,6 +12,8 @@ def gadget_to_asmstring(project, gadget):
     md = project.arch.capstone
     return "; ".join(["%s %s" %(i.mnemonic, i.op_str) for i in md.disasm(code,gadget.addr)])
 
+def gadget_to_capstone():
+    return
 
 def get_ast_dependency(ast):
     """
