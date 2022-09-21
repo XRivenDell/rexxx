@@ -1207,3 +1207,6 @@ class ChainBuilder:
     # todo pivot stack
     # todo pass values to setregs as symbolic variables
     # todo progress bar still sucky
+
+def ROPChain():
+    pass

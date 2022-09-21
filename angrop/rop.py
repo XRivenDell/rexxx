@@ -55,7 +55,7 @@ class ROP(Analysis):
     Additionally, all public methods from ChainBuilder are copied into ROP.
     """
 
-    def __init__(self, only_check_near_rets=True, max_block_size=None, max_sym_mem_access=None, fast_mode=None, rebase=True, is_thumb=False):
+    def __init__(self, only_check_near_rets=True, max_block_size=None, max_sym_mem_access=None, fast_mode=None, mad_mode=None, rebase=True, is_thumb=False):
         """
         Initializes the rop gadget finder
         :param only_check_near_rets: If true we skip blocks that are not near rets
@@ -97,6 +97,7 @@ class ROP(Analysis):
         self.roparg_filler = None
 
         self._fast_mode = fast_mode
+        self._mad_mode = mad_mode
 
         # gadget analyzer
         self._gadget_analyzer = None
@@ -120,6 +121,8 @@ class ROP(Analysis):
 
         # find locations to analyze
         self._ret_locations = self._get_ret_locations()
+        self._ropgadget_locations = self._address_from_ropforce()
+        # print(self._ret_locations)
         num_to_check = self._num_addresses_to_check()
 
         # fast mode
@@ -182,30 +185,38 @@ class ROP(Analysis):
         Saves stack pivots in self.stack_pivots
         """
         self._initialize_gadget_analyzer()
-        self._address_from_ropforce()
+        
         self._gadgets = []
 
         _set_global_gadget_analyzer(self._gadget_analyzer)
-        for _, addr in enumerate(self._addresses_to_check_with_caching(show_progress)):
-            # print(addr)
-            gadget = _global_gadget_analyzer.analyze_gadget(addr)
-            if gadget is not None:
-                if isinstance(gadget, RopGadget):
-                    self._gadgets.append(gadget)
-                elif isinstance(gadget, StackPivot):
-                    self.stack_pivots.append(gadget)
-
-        # fix up gadgets from cache
-        for g in self._gadgets:
-            if g.addr in self._cache:
-                dups = {g.addr}
-                for addr in self._cache[g.addr]:
-                    dups.add(addr)
-                    g_copy = g.copy()
-                    g_copy.addr = addr
-                    self._gadgets.append(g_copy)
-                self._duplicates.append(dups)
-        self._gadgets = sorted(self._gadgets, key=lambda x: x.addr)
+        # for _, addr in enumerate(self._addresses_to_check_out_caching(show_progress)):
+        if self._mad_mode:
+            for _, addr in enumerate(self._more_addresses_to_check_without_caching()):
+                gadget = _global_gadget_analyzer.analyze_gadget(addr)
+                if gadget is not None:
+                    if isinstance(gadget, RopGadget):
+                        self._gadgets.append(gadget)
+                    elif isinstance(gadget, StackPivot):
+                        self.stack_pivots.append(gadget)
+        else:
+            for _, addr in enumerate(self._addresses_to_check_with_caching(show_progress)):
+                gadget = _global_gadget_analyzer.analyze_gadget(addr)
+                if gadget is not None:
+                    if isinstance(gadget, RopGadget):
+                        self._gadgets.append(gadget)
+                    elif isinstance(gadget, StackPivot):
+                        self.stack_pivots.append(gadget)
+            # fix up gadgets from cache
+            for g in self._gadgets:
+                if g.addr in self._cache:
+                    dups = {g.addr}
+                    for addr in self._cache[g.addr]:
+                        dups.add(addr)
+                        g_copy = g.copy()
+                        g_copy.addr = addr
+                        self._gadgets.append(g_copy)
+                    self._duplicates.append(dups)
+            self._gadgets = sorted(self._gadgets, key=lambda x: x.addr)
         self._reload_chain_funcs()
 
     def save_gadgets(self, path):
@@ -311,10 +322,10 @@ class ROP(Analysis):
         num_addrs = self._num_addresses_to_check()
         self._cache = {}
         seen = {}
-        import ipdb; ipdb.set_trace()
-        # iterable = self._addresses_to_check()
-        iterable = self._more_addresses_to_check()
-        print(iterable)
+        if self._mad_mode:
+            iterable = self._more_addresses_to_check()
+        else:
+            iterable = self._addresses_to_check()
         if show_progress:
             iterable = tqdm.tqdm(iterable=iterable, smoothing=0, total=num_addrs,
                                  desc="ROP", maxinterval=0.5, dynamic_ncols=True)
@@ -323,10 +334,9 @@ class ROP(Analysis):
             try:
                 bl = self.project.factory.block(a)
                 # HACK: I don't think it's useful
-                # if bl.size > self.arch.max_block_size:
-                #     continue
+                if bl.size > self.arch.max_block_size:
+                    continue
                 block_data = bl.bytes
-                # print(hex(a), block_data)
             except (SimEngineError, SimMemoryError):
                 continue
             if block_data in seen:
@@ -365,7 +375,7 @@ class ROP(Analysis):
                     for addr in range(segment.min_addr, segment.max_addr):
                         yield addr
                         
-    def _more_addresses_to_check(self):
+    def _more_addresses_to_check_without_caching(self):
         """
         :return: all the addresses to check
         contain ropgadgets content
@@ -373,40 +383,44 @@ class ROP(Analysis):
         # if self._only_check_near_rets:
             # align block size
         alignment = self.arch.alignment
+        # print(alignment)
         block_size = (self.arch.max_block_size & ((1 << self.project.arch.bits) - alignment)) + alignment
         slices = [(addr-block_size, addr) for addr in self._ret_locations]
-        # print(slices)
         slices.extend(self._ropgadget_locations)
-        slices = set(slices)
-        print(slices)
+        # for s in slices:
+        #     print(hex(s[0]),hex(s[1]))
+        # print(slices)
+        slices = sorted(slices, key=lambda x:x[0])
 
         current_addr = 0
+        """
+        # TODO: Do not use
+        Don't understand why handle like this
+        """
         for st, ed in slices:
+            print("slices: ",hex(st),hex(ed))
             current_addr = max(current_addr, st)
             if ed == st+block_size:
-                end_addr = st + block_size + alignment
+                # HACK: May be not considate thumb mode
+                # Fucking thumb mode is fucking crazy
+                end_addr = st + block_size + alignment*2
             else:
                 end_addr = ed
-            # print(current_addr,end_addr)
+            print("traverse: ",hex(current_addr),hex(end_addr))
             for i in range(current_addr, end_addr, alignment):
                 segment = self.project.loader.main_object.find_segment_containing(i)
+                # print(hex(current_addr),segment)
                 if segment is not None and segment.is_executable:
                     print(hex(i))
                     yield i
             current_addr = max(current_addr, end_addr)
-        # else:
-        #     for segment in self.project.loader.main_object.segments:
-        #         if segment.is_executable:
-        #             l.debug("Analyzing segment with address range: 0x%x, 0x%x" % (segment.min_addr, segment.max_addr))
-        #             for addr in range(segment.min_addr, segment.max_addr):
-        #                 yield addr
 
     def _address_from_ropforce(self):
         # import ipdb; ipdb.set_trace();
         addrs = GetAddrFromROPgadget(self.project.filename)
-        self._ropgadget_locations= addrs
+        # self._ropgadget_locations= addrs
         # self._more_addresses_to_check()
-        print(self._ropgadget_locations)
+        # print(self._ropgadget_locations)
         return addrs
     
     def _num_addresses_to_check(self):
@@ -414,7 +428,10 @@ class ROP(Analysis):
             # TODO: This could probably be optimized further by fewer segments checks (i.e. iterating for segments and
             #  adding ranges instead of incrementing, instead of calling _addressses_to_check) although this is still a
             # significant improvement.
-            return sum(1 for _ in self._addresses_to_check())
+            if self._mad_mode:
+                return sum(1 for _ in self._more_addresses_to_check_without_caching())
+            else:
+                return sum(1 for _ in self._addresses_to_check())
         else:
             num = 0
             for segment in self.project.loader.main_object.segments:
@@ -448,6 +465,7 @@ class ROP(Analysis):
                     try:
                         block = self.project.factory.block(addr)
                         # it it has a ret get the return address
+                        # print(hex(addr),block.vex.jumpkind)
                         if block.vex.jumpkind.startswith("Ijk_Ret"):
                             ret_addr = block.instruction_addrs[-1]
                             # hack for mips pipelining
@@ -514,5 +532,8 @@ class ROP(Analysis):
                     return True
                 tmp_addr >>= 8
         return False
+
+class ROPChain():
+    pass
 
 register_analysis(ROP, 'ROP')
