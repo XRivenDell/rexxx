@@ -239,6 +239,18 @@ def test_rop_arm_new_mad_mode():
 
     embed()
 
+def test_httpd():
+    # print("what?")
+    # b = angr.Project(os.path.join(public_bin_location, "manysum"), load_options={"auto_load_libs": False})
+    b = angr.Project(os.path.join(public_bin_location, "httpd"), load_options={"auto_load_libs": False})
+    rop = b.analyses.ROP()
+    # embed()
+    # import ipdb; ipdb.set_trace();
+    rop.find_gadgets_single_threaded(show_progress=True)
+
+    embed()
+
+
 if __name__ == "__main__":
     logging.getLogger("angrop.rop").setLevel(logging.DEBUG)
 
@@ -247,5 +259,10 @@ if __name__ == "__main__":
     #     globals()['test_' + sys.argv[1]]()
     # else:
     #     run_all()
-    test_rop_arm_new()
-    test_rop_arm_new_mad_mode()
+    import sys
+    # print(len(sys.argv))
+    if (len(sys.argv)) > 1:
+        test_httpd()
+    else:
+        test_rop_arm_new()
+        # test_rop_arm_new_mad_mode()
