@@ -262,12 +262,13 @@ if __name__ == "__main__":
     #     globals()['test_' + sys.argv[1]]()
     # else:
     #     run_all()
-    import sys
+    # import sys
     # print(len(sys.argv))
-    if (len(sys.argv)) > 1:
-        # if sys.argv[2] == 'httpd':
-        #     test_httpd()
-        test_rop_arm_new_mad_mode()
-    else:
-        test_rop_arm_new()
+    # if (len(sys.argv)) > 1:
+    #     # if sys.argv[2] == 'httpd':
+    #     #     test_httpd()
+    #     test_rop_arm_new_mad_mode()
+    # else:
+    #     test_rop_arm_new()
+    test_rop_arm_new_mad_mode()
 
