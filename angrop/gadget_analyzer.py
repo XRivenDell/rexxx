@@ -12,6 +12,9 @@ from .errors import RopException, RegNotFoundException
 
 l = logging.getLogger("angrop.gadget_analyzer")
 
+from IPython import embed
+from ipdb import set_trace
+
 
 class GadgetAnalyzer:
     def __init__(self, project, fast_mode, arch=None, stack_length=80):
@@ -37,14 +40,14 @@ class GadgetAnalyzer:
         :param addr: address to analyze for a gadget
         :return: a RopGadget instance
         """
-        l.info("Analyzing 0x%x", addr)
+        # l.warn("Analyzing 0x%x", addr)
 
         # first check if the block makes sense
-        # import ipdb; ipdb.set_trace();
         if not self._block_makes_sense(addr):
             return None
 
         try:
+            # l.log('0x%x really analysis' % addr)
             # unconstrained check prefilter
             if self._does_not_get_to_unconstrained(addr):
                 l.debug("... does not get to unconstrained successor")
@@ -70,8 +73,12 @@ class GadgetAnalyzer:
                 return None
 
             # create the gadget
-            this_gadget = RopGadget(addr=addr)
-            # FIXME this doesnt handle multiple steps
+            # embed()
+            # self.project.arch
+            # HACK: add capstone to ropgadget class
+            this_gadget = RopGadget(addr=addr, cap=self.project.factory.block(addr).capstone)
+            
+            # FIXME: this doesnt handle multiple steps
             this_gadget.block_length = self.project.factory.block(addr).size
             this_gadget.gadget_type = gadget_type
 
@@ -148,7 +155,7 @@ class GadgetAnalyzer:
         except (claripy.ClaripyFrontendError, angr.engines.vex.claripy.ccall.CCallMultivaluedException) as e:
             l.warning("... claripy error: %s", e)
             return None
-        except Exception as e:# pylint:disable=broad-except
+        except Exception as e:
             l.exception(e)
             return None
 

@@ -88,7 +88,7 @@ class MIPS(ROPArch):
 
 def get_arch(project):
     name = project.arch.name
-    print(name)
+    # print(name)
     if name == 'X86':
         return X86(project)
     elif name == 'AMD64':

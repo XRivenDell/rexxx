@@ -1,4 +1,5 @@
 from .arch import ROPArch,X86,ARM,MIPS,PPC
+from angr.block import CapstoneBlock
 
 class RopMemAccess:
     """Holds information about memory accesses
@@ -80,13 +81,21 @@ class StackPivot:
 
     def __repr__(self):
         return "<Pivot %#x>" % self.addr
+"""
+TODO:
+add capstr for RopGadget Class
+"""
 
 class RopGadget():
     """
     Gadget objects
     """
-    def __init__(self, addr):
+    def __init__(self, addr, cap=None):
         self.addr = addr
+        if isinstance(cap, CapstoneBlock):
+            self.cap = cap
+        else:
+            self.cap = None
         self.changed_regs = set()
         self.popped_regs = set()
         self.concrete_regs = {}
@@ -105,7 +114,6 @@ class RopGadget():
         self.jump_reg = None
 
         self.pc_reg = None
-        self.capstr = ""
 
     @property 
     def is_pc_reg():
@@ -114,6 +122,15 @@ class RopGadget():
     @property
     def num_mem_access(self):
         return len(self.mem_reads) + len(self.mem_writes) + len(self.mem_changes)
+
+    def pp(self):
+        return self.cap.pp()
+    
+    def ppstr(self):
+        res = ''
+        for ins in self.cap.insns:
+            res += " %s %s; " % (ins.mnemonic, ins.op_str)
+        return res[:len(res)-1]
 
     def __str__(self):
         s = "Gadget %#x\n" % self.addr
@@ -174,12 +191,11 @@ class RopGadget():
         return s
 
     def __repr__(self):
-        return "<Gadget %#x>" % self.addr
-    
-    # def 
+        return "<Gadget %#x>: " % self.addr + self.ppstr()
 
     def copy(self):
         out = RopGadget(self.addr)
+        out.cap = self.cap
         out.addr = self.addr
         out.changed_regs = set(self.changed_regs)
         out.popped_regs = set(self.popped_regs)

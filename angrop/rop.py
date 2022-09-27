@@ -21,7 +21,12 @@ from .rop_gadget import RopGadget, StackPivot
 from multiprocessing import Pool
 
 l = logging.getLogger('angrop.rop')
-logging.getLogger('pyvex.lifting').setLevel("ERROR")
+logging.getLogger('pyvex.lifting').setLevel(logging.ERROR)
+logging.getLogger('angrop.rop').setLevel(logging.INFO)
+
+# for debug
+from IPython import embed
+from ipdb import set_trace
 
 
 _global_gadget_analyzer = None
@@ -37,7 +42,7 @@ def _disable_loggers():
 def _set_global_gadget_analyzer(rop_gadget_analyzer):
     global _global_gadget_analyzer
     _global_gadget_analyzer = rop_gadget_analyzer
-    _disable_loggers()
+    # _disable_loggers()
 
 def run_worker(addr):
     return _global_gadget_analyzer.analyze_gadget(addr)
@@ -121,8 +126,8 @@ class ROP(Analysis):
 
         # find locations to analyze
         self._ret_locations = self._get_ret_locations()
-        self._ropgadget_locations = self._address_from_ropforce()
-        # print(self._ret_locations)
+        if self._mad_mode:
+            self._ropgadget_locations = self._address_from_ropforce()
         num_to_check = self._num_addresses_to_check()
 
         # fast mode
@@ -138,8 +143,8 @@ class ROP(Analysis):
             # Recalculate num addresses to check based on fast_mode settings
             num_to_check = self._num_addresses_to_check()
 
-        l.info("There are %d addresses within %d bytes of a ret",
-               num_to_check, self.arch.max_block_size)
+        l.info("There are %d addresses need to check", num_to_check)
+        # l.info("There are %d addresses within %d bytes of a ret", num_to_check, self.arch.max_block_size)
 
         self._gadget_analyzer = gadget_analyzer.GadgetAnalyzer(self.project, self._fast_mode, arch=self.arch)
 
@@ -185,38 +190,29 @@ class ROP(Analysis):
         Saves stack pivots in self.stack_pivots
         """
         self._initialize_gadget_analyzer()
-        
         self._gadgets = []
-
         _set_global_gadget_analyzer(self._gadget_analyzer)
-        # for _, addr in enumerate(self._addresses_to_check_out_caching(show_progress)):
-        if self._mad_mode:
-            for _, addr in enumerate(self._more_addresses_to_check_without_caching()):
-                gadget = _global_gadget_analyzer.analyze_gadget(addr)
-                if gadget is not None:
-                    if isinstance(gadget, RopGadget):
-                        self._gadgets.append(gadget)
-                    elif isinstance(gadget, StackPivot):
-                        self.stack_pivots.append(gadget)
-        else:
-            for _, addr in enumerate(self._addresses_to_check_with_caching(show_progress)):
-                gadget = _global_gadget_analyzer.analyze_gadget(addr)
-                if gadget is not None:
-                    if isinstance(gadget, RopGadget):
-                        self._gadgets.append(gadget)
-                    elif isinstance(gadget, StackPivot):
-                        self.stack_pivots.append(gadget)
-            # fix up gadgets from cache
-            for g in self._gadgets:
-                if g.addr in self._cache:
-                    dups = {g.addr}
-                    for addr in self._cache[g.addr]:
-                        dups.add(addr)
-                        g_copy = g.copy()
-                        g_copy.addr = addr
-                        self._gadgets.append(g_copy)
-                    self._duplicates.append(dups)
-            self._gadgets = sorted(self._gadgets, key=lambda x: x.addr)
+  
+        for _, addr in enumerate(self._addresses_to_check_with_caching(show_progress)):
+            gadget = _global_gadget_analyzer.analyze_gadget(addr)
+            if gadget is not None:
+                if isinstance(gadget, RopGadget):
+                    self._gadgets.append(gadget)
+                elif isinstance(gadget, StackPivot):
+                    self.stack_pivots.append(gadget)
+        # fix up gadgets from cache
+        for g in self._gadgets:
+            if g.addr in self._cache:
+                dups = {g.addr}
+                for addr in self._cache[g.addr]:
+                    dups.add(addr)
+                    g_copy = g.copy()
+                    g_copy.addr = addr
+                    self._gadgets.append(g_copy)
+                self._duplicates.append(dups)
+
+        self._gadgets = sorted(self._gadgets, key=lambda x: x.addr)
+
         self._reload_chain_funcs()
 
     def save_gadgets(self, path):
@@ -331,6 +327,10 @@ class ROP(Analysis):
                                  desc="ROP", maxinterval=0.5, dynamic_ncols=True)
 
         for a in iterable:
+            if self._mad_mode:
+                l.info('mad_mode: analysis 0x%x' , a)
+            else:
+                l.info('general_mode: anlysis 0x%x', a)
             try:
                 bl = self.project.factory.block(a)
                 # HACK: I don't think it's useful
@@ -375,10 +375,9 @@ class ROP(Analysis):
                     for addr in range(segment.min_addr, segment.max_addr):
                         yield addr
                         
-    def _more_addresses_to_check_without_caching(self):
+    def _more_addresses_to_check(self):
         """
-        :return: all the addresses to check
-        contain ropgadgets content
+        :return: all the addresses to check contain ropgadgets results
         """
         # if self._only_check_near_rets:
             # align block size
@@ -387,18 +386,21 @@ class ROP(Analysis):
         block_size = (self.arch.max_block_size & ((1 << self.project.arch.bits) - alignment)) + alignment
         slices = [(addr-block_size, addr) for addr in self._ret_locations]
         slices.extend(self._ropgadget_locations)
-        # for s in slices:
-        #     print(hex(s[0]),hex(s[1]))
-        # print(slices)
+        slices = set(slices)
+        # HACK: Do not combine the ropgaget with the same start address
+        # only delete the repetitive ropgadgets
+        # different length has different meanings
+
         slices = sorted(slices, key=lambda x:x[0])
 
         current_addr = 0
         """
         # TODO: Do not use
-        Don't understand why handle like this
+        Don't understand why handle like this, seems no need to check is_executable protry
         """
+        print([hex(a)+' : '+hex(b) for (a,b) in slices])
         for st, ed in slices:
-            print("slices: ",hex(st),hex(ed))
+            # print("slices: ",hex(st),hex(ed))
             current_addr = max(current_addr, st)
             if ed == st+block_size:
                 # HACK: May be not considate thumb mode
@@ -406,21 +408,18 @@ class ROP(Analysis):
                 end_addr = st + block_size + alignment*2
             else:
                 end_addr = ed
-            print("traverse: ",hex(current_addr),hex(end_addr))
-            for i in range(current_addr, end_addr, alignment):
-                segment = self.project.loader.main_object.find_segment_containing(i)
+            # print("traverse: ",hex(current_addr),hex(end_addr))
+            # HACK: assume there is no thumb mode assembly
+            for addr in range(current_addr, end_addr, alignment*0x2):
+                segment = self.project.loader.main_object.find_segment_containing(addr)
                 # print(hex(current_addr),segment)
                 if segment is not None and segment.is_executable:
-                    print(hex(i))
-                    yield i
+                    # print(hex(i))
+                    yield addr
             current_addr = max(current_addr, end_addr)
 
     def _address_from_ropforce(self):
-        # import ipdb; ipdb.set_trace();
         addrs = GetAddrFromROPgadget(self.project.filename)
-        # self._ropgadget_locations= addrs
-        # self._more_addresses_to_check()
-        # print(self._ropgadget_locations)
         return addrs
     
     def _num_addresses_to_check(self):
@@ -429,7 +428,7 @@ class ROP(Analysis):
             #  adding ranges instead of incrementing, instead of calling _addressses_to_check) although this is still a
             # significant improvement.
             if self._mad_mode:
-                return sum(1 for _ in self._more_addresses_to_check_without_caching())
+                return sum(1 for _ in self._more_addresses_to_check())
             else:
                 return sum(1 for _ in self._addresses_to_check())
         else:

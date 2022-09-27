@@ -229,15 +229,18 @@ def test_rop_arm_new():
     embed()
 
 def test_rop_arm_new_mad_mode():
-        # print("what?")
-    # b = angr.Project(os.path.join(public_bin_location, "manysum"), load_options={"auto_load_libs": False})
     b = angr.Project(os.path.join(public_bin_location, "vuln_stacksmash_withshell"), load_options={"auto_load_libs": False})
-    rop = b.analyses.ROP(mad_mode=True)
-    # embed()
-    # import ipdb; ipdb.set_trace();
+    rop = b.analyses.ROP(only_check_near_rets=False,mad_mode=True)
     rop.find_gadgets_single_threaded(show_progress=False)
 
     embed()
+
+# def test_rop_arm_new_no_near_rets():
+#     b = angr.Project(os.path.join(public_bin_location, "vuln_stacksmash_withshell"), load_options={"auto_load_libs": False})
+#     rop = b.analyses.ROP(only_check_near_rets=False)
+#     rop.find_gadgets_single_threaded(show_progress=False)
+
+#     embed()
 
 def test_httpd():
     # print("what?")
@@ -262,7 +265,9 @@ if __name__ == "__main__":
     import sys
     # print(len(sys.argv))
     if (len(sys.argv)) > 1:
-        test_httpd()
+        # if sys.argv[2] == 'httpd':
+        #     test_httpd()
+        test_rop_arm_new_mad_mode()
     else:
         test_rop_arm_new()
-        # test_rop_arm_new_mad_mode()
+
