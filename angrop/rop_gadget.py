@@ -84,8 +84,7 @@ class StackPivot:
     def __repr__(self):
         return "<Pivot %#x>" % self.addr
 """
-TODO:
-add capstr for RopGadget Class
+HACK: add capstr for RopGadget Class
 """
 
 class RopGadget():

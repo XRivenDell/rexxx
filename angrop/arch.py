@@ -66,6 +66,12 @@ class ARM(ROPArch):
     def __init__(self, project):
         super().__init__(project)
         self.is_thumb = False # by default, we don't use thumb mode
+    
+    def plt_handler(self):
+        pass
+
+    def syscall_handler(self):
+        pass
 
     def block_make_sense(self, block):
         # disable conditional jumps, for now

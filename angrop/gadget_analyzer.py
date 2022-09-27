@@ -16,7 +16,6 @@ l.setLevel(logging.DEBUG)
 from IPython import embed
 from ipdb import set_trace
 
-
 class GadgetAnalyzer:
     def __init__(self, project, fast_mode, arch=None, stack_length=80):
         # params
@@ -60,13 +59,15 @@ class GadgetAnalyzer:
             # create the symbolic state at the address
             init_state = self._test_symbolic_state.copy()
             init_state.ip = addr
+
+            # HACK: add step to unconstrained successor
             final_state = rop_utils.step_to_unconstrained_successor(self.project, state=init_state)
 
             l.debug("0x%x ... analyzing rop potential of block", addr)
 
             # filter out those that dont get to a controlled successor
             l.debug("0x%x ... check for controlled successor", addr)
-            # TODO: Need to Refactoring a function like certain the gadget_type?
+            # TODO: Need to refactoring a function like certain the gadget_type?
             gadget_type = self._check_for_controlled_successor(final_state, init_state)
             if not gadget_type:
                 pivot = self._check_pivot(final_state, init_state, addr)
@@ -399,10 +400,12 @@ class GadgetAnalyzer:
             return "ret"
         if self._check_if_jump_gadget(final_state, init_state):
             return "jump"
+        elif self._check_if_caller_gadget(final_state,init_state):
+            return "caller"
         return None
 
-    @staticmethod
-    def _check_if_jump_gadget(final_state, init_state):
+    # @staticmethod
+    def _check_if_jump_gadget(self, final_state, init_state):
         """
         FIXME: this constraint is too strict, it can be less strict
         a gadget is a jump gadget if
@@ -423,14 +426,40 @@ class GadgetAnalyzer:
 
         return True
 
+    # @staticmethod
+    def _check_if_caller_gadget(self, final_state, init_state):
+        """
+        FIXME: this constraint is too strict, it can be less strict
+        """
+        plts = self.project.loader.main_object.plt
+        return True
+
+        # # constraint 1
+        # if not init_state.solver.eval(final_state.regs.sp == init_state.regs.sp):
+        #     return False
+
+        # # constraint 2
+        # ip = final_state.ip
+        # if len(ip.variables) > 1 or len(ip.variables) == 0:
+        #     return False
+        # var = list(ip.variables)[0]
+        # if not var.startswith('sreg_'):
+        #     return False
+
+        # return True
+
     def _check_if_stack_controls_ast(self, ast, initial_state, gadget_stack_change=None):
+    # def _check_if_ret_gadget(self, ast, initial_state, gadget_stack_change=None):
+        """
+        FIXME: fuck
+        """
         if gadget_stack_change is not None and gadget_stack_change <= 0:
             return False
 
         # if we had the lemma cache this might be already there!
         test_val = 0x4242424242424242 % (1 << self.project.arch.bits)
 
-        # TODO add test where we recognize a value past the end of the stack frame isn't controlled
+        # TODO: add test where we recognize a value past the end of the stack frame isn't controlled
         # this is an annoying problem but this code should handle it
 
         # prefilter

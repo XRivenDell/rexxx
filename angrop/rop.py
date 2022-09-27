@@ -48,8 +48,8 @@ def run_worker(addr):
     return _global_gadget_analyzer.analyze_gadget(addr)
 
 
-# todo what if we have mov eax, [rsp+0x20]; ret (cache would need to know where it is or at least a min/max)
-# todo what if we have pop eax; mov ebx, eax; need to encode that we cannot set them to different values
+# TODO: what if we have mov eax, [rsp+0x20]; ret (cache would need to know where it is or at least a min/max)
+# TODO: what if we have pop eax; mov ebx, eax; need to encode that we cannot set them to different values
 class ROP(Analysis):
     """
     This class is a semantic aware rop gadget finder
@@ -90,6 +90,10 @@ class ROP(Analysis):
 
         # get ret locations
         self._ret_locations = None
+        self._call_locations = None
+        self._syscall_locations = None
+
+        # get the ROPgadgets result from https://github.com/JonathanSalwan/ROPgadget
         self._ropgadget_locations = None
 
         # list of RopGadget's
@@ -126,6 +130,8 @@ class ROP(Analysis):
 
         # find locations to analyze
         self._ret_locations = self._get_ret_locations()
+        self._caller_locations = self._get_caller_locations()
+        self._syscall_locations = self._get_syscall_locations()
         # print(self._ret_locations)
         if self._mad_mode:
             self._ropgadget_locations = self._address_from_ropforce()
@@ -504,6 +510,89 @@ class ROP(Analysis):
                         pass
 
         return sorted(addrs)
+
+    def _get_caller_locations(self):
+        """
+        :return: all the locations in the binary with a call instruction
+        TODO: we need to do some spectify work to judge the callee function for each arch?
+        """
+
+        try:
+            return self._get_ret_locations_by_string()
+        except RopException:
+            pass
+
+        addrs = []
+        # seen = set()
+        # for segment in self.project.loader.main_object.segments:
+        #     if segment.is_executable:
+        #         num_bytes = segment.max_addr-segment.min_addr
+
+        #         alignment = self.arch.alignment
+
+        #         # iterate through the code looking for rets
+        #         for addr in range(segment.min_addr, segment.min_addr + num_bytes, alignment):
+        #             # dont recheck addresses we've seen before
+        #             if addr in seen:
+        #                 continue
+        #             try:
+        #                 block = self.project.factory.block(addr)
+        #                 # it it has a ret get the return address
+        #                 # print(hex(addr),block.vex.jumpkind)
+        #                 if block.vex.jumpkind.startswith("Ijk_Ret"):
+        #                     ret_addr = block.instruction_addrs[-1]
+        #                     # hack for mips pipelining
+        #                     if self.project.arch.linux_name.startswith("mips"):
+        #                         ret_addr = block.instruction_addrs[-2]
+        #                     if ret_addr not in seen:
+        #                         addrs.append(ret_addr)
+        #                 # save the addresses in the block
+        #                 seen.update(block.instruction_addrs)
+        #             except (SimEngineError, SimMemoryError):
+        #                 pass
+        return sorted(addrs)
+    
+    def _get_syscall_locations(self):
+        """
+        :return: all the locations in the binary with a syscall instruction
+        TODO: we need to do some spectify work to judge the callee function for each arch?
+        """
+
+        # try:
+        #     return self._get_ret_locations_by_string()
+        # except RopException:
+        #     pass
+
+        addrs = []
+        # seen = set()
+        # for segment in self.project.loader.main_object.segments:
+        #     if segment.is_executable:
+        #         num_bytes = segment.max_addr-segment.min_addr
+
+        #         alignment = self.arch.alignment
+
+        #         # iterate through the code looking for rets
+        #         for addr in range(segment.min_addr, segment.min_addr + num_bytes, alignment):
+        #             # dont recheck addresses we've seen before
+        #             if addr in seen:
+        #                 continue
+        #             try:
+        #                 block = self.project.factory.block(addr)
+        #                 # it it has a ret get the return address
+        #                 # print(hex(addr),block.vex.jumpkind)
+        #                 if block.vex.jumpkind.startswith("Ijk_Ret"):
+        #                     ret_addr = block.instruction_addrs[-1]
+        #                     # hack for mips pipelining
+        #                     if self.project.arch.linux_name.startswith("mips"):
+        #                         ret_addr = block.instruction_addrs[-2]
+        #                     if ret_addr not in seen:
+        #                         addrs.append(ret_addr)
+        #                 # save the addresses in the block
+        #                 seen.update(block.instruction_addrs)
+        #             except (SimEngineError, SimMemoryError):
+        #                 pass
+        return sorted(addrs)
+
 
     def _get_ret_locations_by_string(self):
         """

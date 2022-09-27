@@ -158,10 +158,14 @@ def make_initial_state(project, stack_length):
     :return: an initial state with a symbolic stack and good options for rop
     """
     initial_state = project.factory.blank_state(
-        add_options={angr.options.AVOID_MULTIVALUED_READS, angr.options.AVOID_MULTIVALUED_WRITES,
-                     angr.options.NO_SYMBOLIC_JUMP_RESOLUTION, angr.options.CGC_NO_SYMBOLIC_RECEIVE_LENGTH,
-                     angr.options.NO_SYMBOLIC_SYSCALL_RESOLUTION, angr.options.TRACK_ACTION_HISTORY,
-                     angr.options.ADD_AUTO_REFS},
+        add_options={angr.options.AVOID_MULTIVALUED_READS,
+                     angr.options.AVOID_MULTIVALUED_WRITES,
+                     angr.options.NO_SYMBOLIC_JUMP_RESOLUTION,
+                     angr.options.CGC_NO_SYMBOLIC_RECEIVE_LENGTH,
+                     angr.options.NO_SYMBOLIC_SYSCALL_RESOLUTION,
+                     angr.options.TRACK_ACTION_HISTORY,
+                     angr.options.ADD_AUTO_REFS
+                     },
         remove_options=angr.options.resilience | angr.options.simplification)
     initial_state.options.discard(angr.options.CGC_ZERO_FILL_UNCONSTRAINED_MEMORY)
     initial_state.options.update({angr.options.TRACK_REGISTER_ACTIONS, angr.options.TRACK_MEMORY_ACTIONS,
@@ -197,6 +201,13 @@ def make_reg_symbolic(state, reg):
     state.registers.store(reg,
     state.solver.BVS("sreg_" + reg + "-", state.arch.bits))
 
+class PltHandler(angr.SimProcedure):
+    def __init__(self, project):
+        self.project = project
+        self.plts = self.project.loader.main_object.plt
+    def run(self, argc, argv):
+        print('Program running with argc=%s and argv=%s' % (argc, argv))
+        return 0
 
 def step_to_unconstrained_successor(project, state, max_steps=2, allow_simprocedures=False):
     """
@@ -216,9 +227,12 @@ def step_to_unconstrained_successor(project, state, max_steps=2, allow_simproced
         if len(succ.flat_successors) + len(succ.unconstrained_successors) != 1:
             raise RopException("Does not get to a single successor")
         if len(succ.flat_successors) == 1 and max_steps > 0:
-            if not allow_simprocedures and project.is_hooked(succ.flat_successors[0].addr):
+            # if not allow_simprocedures: # REVIEW: and project.is_hooked(succ.flat_successors[0].addr):
+            if not allow_simprocedures:# and project.is_hooked(succ.flat_successors[0].addr):
                 # it cannot be a syscall as now syscalls are not explicitly hooked
-                raise RopException("Skipping simprocedure")
+                # raise RopException("Skipping simprocedure")
+                print("simprocedure hooked!\n")
+                return succ.flat_successors[0]
             return step_to_unconstrained_successor(project, succ.flat_successors[0],
                                                    max_steps-1, allow_simprocedures)
         if len(succ.flat_successors) == 1 and max_steps == 0:
