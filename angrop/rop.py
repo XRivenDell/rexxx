@@ -126,6 +126,7 @@ class ROP(Analysis):
 
         # find locations to analyze
         self._ret_locations = self._get_ret_locations()
+        # print(self._ret_locations)
         if self._mad_mode:
             self._ropgadget_locations = self._address_from_ropforce()
         num_to_check = self._num_addresses_to_check()
@@ -194,6 +195,7 @@ class ROP(Analysis):
         _set_global_gadget_analyzer(self._gadget_analyzer)
   
         for _, addr in enumerate(self._addresses_to_check_with_caching(show_progress)):
+            l.info("Analyze gadget 0x%x", addr)
             gadget = _global_gadget_analyzer.analyze_gadget(addr)
             if gadget is not None:
                 if isinstance(gadget, RopGadget):
@@ -330,24 +332,34 @@ class ROP(Analysis):
             if self._mad_mode:
                 l.info('mad_mode: analysis 0x%x' , a)
             else:
-                l.info('general_mode: anlysis 0x%x', a)
+                l.info('general_mode: analysis 0x%x', a)
+            # HACK:add alignment check for arm            
+            if self.project.arch.name.startswith('ARM') and self.arch.is_thumb is False:
+                if a % (self.arch.alignment*0x2):
+                    l.warn("0x%x not a vaild address in ARM", a)
+                    continue
             try:
                 bl = self.project.factory.block(a)
+                l.debug('0x%x successfully create project.factory.block size: 0x%x',a, bl.size)
                 # HACK: I don't think it's useful
                 if bl.size > self.arch.max_block_size:
+                    l.warn("0x%x block size is 0x%x larger than arch.max_block_size", a, bl.size)
                     continue
                 block_data = bl.bytes
             except (SimEngineError, SimMemoryError):
+                l.warn("0x%x trigger SimEngineMemmoryError", a)
                 continue
             if block_data in seen:
                 self._cache[seen[block_data]].add(a)
                 continue
             else:
-                if self._is_jumpkind_valid(bl.vex.jumpkind) and \
-                        len(bl.vex.constant_jump_targets) == 0 and \
-                        not self._block_has_ip_relative(a, bl):
-                    seen[block_data] = a
-                    self._cache[a] = set()
+                # if self._is_jumpkind_valid(bl.vex.jumpkind) and \
+                #         len(bl.vex.constant_jump_targets) == 0 and \
+                #         not self._block_has_ip_relative(a, bl):
+                #     seen[block_data] = a
+                #     self._cache[a] = set()
+                # else:
+                #     l.warn("0x%x failed because wtf", a)
                 yield a
 
     def _addresses_to_check(self):
@@ -357,12 +369,22 @@ class ROP(Analysis):
         if self._only_check_near_rets:
             # align block size
             alignment = self.arch.alignment
+            # print(self.arch.max_block_size)
+            # HACK: no thumb mode, fuck how to certain is thumb_mode arm instructions
+            # if thumb_mode:
+            # block_size = (self.arch.max_block_size & ((1 << self.project.arch.bits) - alignment)) + alignment*0x2
             block_size = (self.arch.max_block_size & ((1 << self.project.arch.bits) - alignment)) + alignment
             slices = [(addr-block_size, addr) for addr in self._ret_locations]
             current_addr = 0
+            print("addresses_to_check: ",[hex(a)+' : '+hex(b) for (a,b) in slices])
             for st, _ in slices:
                 current_addr = max(current_addr, st)
                 end_addr = st + block_size + alignment
+                # HACK: do not consider thumb mode
+                # if thumb_mode:
+                #    for i in range(current_addr, end_addr, alignment):
+                # else:
+                # for i in range(current_addr, end_addr, alignment*0x2):
                 for i in range(current_addr, end_addr, alignment):
                     segment = self.project.loader.main_object.find_segment_containing(i)
                     if segment is not None and segment.is_executable:
@@ -383,7 +405,9 @@ class ROP(Analysis):
             # align block size
         alignment = self.arch.alignment
         # print(alignment)
-        block_size = (self.arch.max_block_size & ((1 << self.project.arch.bits) - alignment)) + alignment
+        print(hex(self.arch.max_block_size),hex(self.project.arch.bits))
+        block_size = (self.arch.max_block_size & ((1 << self.project.arch.bits) - alignment)) + alignment*2
+        print(block_size)
         slices = [(addr-block_size, addr) for addr in self._ret_locations]
         slices.extend(self._ropgadget_locations)
         slices = set(slices)
@@ -398,19 +422,21 @@ class ROP(Analysis):
         # TODO: Do not use
         Don't understand why handle like this, seems no need to check is_executable protry
         """
-        print([hex(a)+' : '+hex(b) for (a,b) in slices])
+        print("_more_addresses_to_check: ",[hex(a)+' : '+hex(b) for (a,b) in slices])
         for st, ed in slices:
             # print("slices: ",hex(st),hex(ed))
             current_addr = max(current_addr, st)
             if ed == st+block_size:
                 # HACK: May be not considate thumb mode
                 # Fucking thumb mode is fucking crazy
-                end_addr = st + block_size + alignment*2
+                end_addr = st + block_size + alignment
             else:
                 end_addr = ed
-            # print("traverse: ",hex(current_addr),hex(end_addr))
-            # HACK: assume there is no thumb mode assembly
-            for addr in range(current_addr, end_addr, alignment*0x2):
+            # HACK: do not consider thumb mode
+            # if thumb_mode:
+            #    for i in range(current_addr, end_addr, alignment):
+            # else:
+            for addr in range(current_addr, end_addr, alignment):
                 segment = self.project.loader.main_object.find_segment_containing(addr)
                 # print(hex(current_addr),segment)
                 if segment is not None and segment.is_executable:

@@ -11,6 +11,7 @@ from .rop_gadget import RopGadget, RopMemAccess, RopRegMove, StackPivot
 from .errors import RopException, RegNotFoundException
 
 l = logging.getLogger("angrop.gadget_analyzer")
+l.setLevel(logging.DEBUG)
 
 from IPython import embed
 from ipdb import set_trace
@@ -35,22 +36,25 @@ class GadgetAnalyzer:
         self._sp_reg = self.project.arch.register_names[self.project.arch.sp_offset]
 
     # @rop_utils.timeout(3)
-    def analyze_gadget(self, addr):
+    def analyze_gadget(self, addr, maylength=0):
         """
         :param addr: address to analyze for a gadget
         :return: a RopGadget instance
         """
-        # l.warn("Analyzing 0x%x", addr)
-
         # first check if the block makes sense
+        # print(hex(addr), self._block_makes_sense(addr))
+        # 
+        if addr == 0x104cc or addr==0x104e0:
+            import ipdb; ipdb.set_trace();
+
         if not self._block_makes_sense(addr):
+            l.info("0x%x ... block doesnot make sense", addr)
             return None
 
         try:
-            # l.log('0x%x really analysis' % addr)
             # unconstrained check prefilter
             if self._does_not_get_to_unconstrained(addr):
-                l.debug("... does not get to unconstrained successor")
+                l.debug("0x%x ... does not get to unconstrained successor", addr)
                 return None
 
             # create the symbolic state at the address
@@ -58,10 +62,11 @@ class GadgetAnalyzer:
             init_state.ip = addr
             final_state = rop_utils.step_to_unconstrained_successor(self.project, state=init_state)
 
-            l.debug("... analyzing rop potential of block")
+            l.debug("0x%x ... analyzing rop potential of block", addr)
 
             # filter out those that dont get to a controlled successor
-            l.info("... check for controlled successor")
+            l.debug("0x%x ... check for controlled successor", addr)
+            # TODO: Need to Refactoring a function like certain the gadget_type?
             gadget_type = self._check_for_controlled_successor(final_state, init_state)
             if not gadget_type:
                 pivot = self._check_pivot(final_state, init_state, addr)
@@ -69,14 +74,14 @@ class GadgetAnalyzer:
 
             # filter out if too many mem accesses
             if not self._satisfies_mem_access_limits(final_state):
-                l.debug("... too many symbolic memory accesses")
+                l.debug("0x%x ... too many symbolic memory accesses", addr)
                 return None
 
             # create the gadget
-            # embed()
             # self.project.arch
             # HACK: add capstone to ropgadget class
-            this_gadget = RopGadget(addr=addr, cap=self.project.factory.block(addr).capstone)
+            l.debug('0x%x is successfully generate ropgadget', addr)
+            this_gadget = RopGadget(addr=addr, cap=self.project.factory.block(addr).capstone, type=gadget_type)
             
             # FIXME: this doesnt handle multiple steps
             this_gadget.block_length = self.project.factory.block(addr).size
@@ -101,7 +106,7 @@ class GadgetAnalyzer:
                 this_gadget.jump_reg = jump_reg
 
             # compute sp change
-            l.debug("... computing sp change")
+            l.debug("0x%x ... computing sp change", addr)
             if gadget_type == "jump":
                 this_gadget.stack_change = 0
             else:
@@ -124,17 +129,17 @@ class GadgetAnalyzer:
                         l.debug("... too many symbolic memory accesses")
                         return None
 
-            l.info("... checking for syscall availability")
+            l.info("0x%x ... checking for syscall availability", addr)
             this_gadget.makes_syscall = self._does_syscall(final_state)
             this_gadget.starts_with_syscall = self._starts_with_syscall(addr)
 
-            l.info("... checking for controlled regs")
+            l.info("0x%x ... checking for controlled regs", addr)
             self._check_reg_changes(final_state, init_state, this_gadget)
 
             # check for reg moves
             # get reg reads
             reg_reads = self._get_reg_reads(final_state)
-            l.debug("... checking for reg moves")
+            l.debug("0x%x ... checking for reg moves", addr)
             self._check_reg_change_dependencies(init_state, final_state, this_gadget)
             self._check_reg_movers(init_state, final_state, reg_reads, this_gadget)
 
@@ -142,7 +147,7 @@ class GadgetAnalyzer:
             self._analyze_concrete_regs(final_state, this_gadget)
 
             # check mem accesses
-            l.debug("... analyzing mem accesses")
+            l.debug("0x%x ... analyzing mem accesses", addr)
             self._analyze_mem_accesses(final_state, init_state, this_gadget)
             for m_access in this_gadget.mem_writes + this_gadget.mem_reads + this_gadget.mem_changes:
                 if len(m_access.addr_dependencies) == 0 and m_access.addr_constant is None:
@@ -150,16 +155,16 @@ class GadgetAnalyzer:
                     return None
 
         except RopException as e:
-            l.debug("... %s", e)
+            l.debug("0x%x ... %s", e, addr)
             return None
         except (claripy.ClaripyFrontendError, angr.engines.vex.claripy.ccall.CCallMultivaluedException) as e:
-            l.warning("... claripy error: %s", e)
+            l.warning("0x%x ... claripy error: %s", e, addr)
             return None
         except Exception as e:
             l.exception(e)
             return None
 
-        l.debug("... Appending gadget!")
+        l.debug("0x%x ... Appending gadget!" % addr)
         return this_gadget
 
     def _block_makes_sense(self, addr):
@@ -169,7 +174,7 @@ class GadgetAnalyzer:
         :return: True or False
         """
         try:
-            l.debug("... checking if block makes sense")
+            l.debug("0x%x ... checking if block makes sense" % addr)
             block = self.project.factory.block(addr)
             # print(block)
 
@@ -180,7 +185,7 @@ class GadgetAnalyzer:
                 return False
 
             if block.vex.jumpkind == 'Ijk_NoDecode':
-                l.debug("... not decodable")
+                l.debug("0x%x ... address is not decodable", addr)
                 return False
 
             if self._fast_mode:
@@ -228,7 +233,7 @@ class GadgetAnalyzer:
 
         return True
 
-    # todo this one skips syscalls so it doesnt need to step as far?
+    # TODO: this one skips syscalls so it doesnt need to step as far?
     def _does_not_get_to_unconstrained(self, addr, max_steps=2):
         try:
             # might miss jumps where one side is never satisfiable
@@ -600,7 +605,7 @@ class GadgetAnalyzer:
 
     def _check_pivot(self, symbolic_p, symbolic_state, addr):
         """
-        Super basic pivot analysis. Pivots are not really used by angrop right now
+        Super basic pivot analysis. pivots are not really used by angrop right now
         :param symbolic_p: the stepped path, symbolic_state is an ancestor of it.
         :param symbolic_state: input state for testing
         :return: the pivot object

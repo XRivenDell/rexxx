@@ -205,8 +205,10 @@ def step_to_unconstrained_successor(project, state, max_steps=2, allow_simproced
     :param max_steps: maximum number of additional steps to try to get to an unconstrained state
     :return: a path at the unconstrained successor
     """
+    # TODO: may be need to add the plt handler
     try:
-        # might only want to enable this option for arches / oses which don't care about bad syscall
+        # might only want to enable this option for arches /oses which don't care about bad syscall
+        # So why don't do that?
         # nums
         state.options.add(angr.options.BYPASS_UNSUPPORTED_SYSCALL)
 

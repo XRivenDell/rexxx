@@ -62,6 +62,8 @@ class RopRegMove:
             return False
         return self.from_reg == other.from_reg and self.to_reg == other.to_reg and self.bits == other.bits
 
+# HACK: PivotGadget,JumpGadget,RetGadget,CallerGadget???
+
 class StackPivot:
     """
     stack pivot gadget
@@ -90,7 +92,7 @@ class RopGadget():
     """
     Gadget objects
     """
-    def __init__(self, addr, cap=None):
+    def __init__(self, addr, cap=None, type="default"):
         self.addr = addr
         if isinstance(cap, CapstoneBlock):
             self.cap = cap
@@ -110,7 +112,7 @@ class RopGadget():
         self.block_length = None
         self.makes_syscall = False
         self.starts_with_syscall = False
-        self.gadget_type = None
+        self.gadget_type = type
         self.jump_reg = None
 
         self.pc_reg = None
@@ -215,11 +217,3 @@ class RopGadget():
         out.jump_reg = self.jump_reg
         out.pc_reg = self.pc_reg
         return out
-
-# class ArmRopGadget(RopGadget):
-
-#     def __init__(self):
-#         pass
-    
-#     def __repr__(self):
-#         pass
