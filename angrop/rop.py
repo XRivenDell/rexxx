@@ -411,9 +411,9 @@ class ROP(Analysis):
             # align block size
         alignment = self.arch.alignment
         # print(alignment)
-        print(hex(self.arch.max_block_size),hex(self.project.arch.bits))
+        # print(hex(self.arch.max_block_size),hex(self.project.arch.bits))
         block_size = (self.arch.max_block_size & ((1 << self.project.arch.bits) - alignment)) + alignment*2
-        print(block_size)
+        # print(block_size)
         slices = [(addr-block_size, addr) for addr in self._ret_locations]
         slices.extend(self._ropgadget_locations)
         slices = set(slices)
