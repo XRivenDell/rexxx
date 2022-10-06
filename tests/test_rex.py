@@ -543,15 +543,17 @@ def test_linux_armel_stacksmash_shell():
     lib_path = path
     inp = b"A" * 0x100
 
-    input("Let's go to run "+str(path))
+    input("Let's go to run "+str(bin_path))
     with archr.targets.LocalTarget([ld_path, '--library-path', lib_path, bin_path], bin_path, target_arch='arm').build().start() as target:
         # embed()
         print("Success")
         crash = rex.Crash(target, inp)
 
-        exploit = crash.exploit(
-            blacklist_techniques={"ret2shell","rop_to_execl","call_shellcode","call_jmp_sp_shellcode","rop_register_control","rop_to_accept_system","rop_to_system_complicated","ret2libc"}
-        )
+        # exploit = crash.exploit(
+        #     blacklist_techniques={"ret2shell","rop_to_execl","call_shellcode","call_jmp_sp_shellcode","rop_register_control","rop_to_accept_system","rop_to_system_complicated","ret2libc"}
+        # )
+        embed()
+        # exploit = crash.exploit()
 
         # make sure we're able to exploit it in all possible ways
         # assert len(exploit.arsenal) == 3

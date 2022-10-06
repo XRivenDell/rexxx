@@ -166,8 +166,10 @@ class ROP(Analysis):
         self._gadgets = []
 
         pool = Pool(processes=processes, initializer=_set_global_gadget_analyzer, initargs=(self._gadget_analyzer,))
-
-        it = pool.imap_unordered(run_worker, self._addresses_to_check_with_caching(show_progress), chunksize=5)
+        # waits = self._addresses_to_check_with_caching(show_progress)
+        # print(waits)
+        it = pool.imap_unordered(run_worker, self._addresses_to_check_with_caching(show_progress), chunksize=6)
+        # print(".............",it)
         for gadget in it:
             if gadget is not None:
                 if isinstance(gadget, RopGadget):
@@ -322,7 +324,7 @@ class ROP(Analysis):
                 filtered_diffs.append(d)
         return len(filtered_diffs) > 0
 
-    def _addresses_to_check_with_caching(self, show_progress=True):
+    def _addresses_to_check_without_caching(self, show_progress=True):
         num_addrs = self._num_addresses_to_check()
         self._cache = {}
         seen = {}
@@ -368,6 +370,38 @@ class ROP(Analysis):
                 #     l.warn("0x%x failed because wtf", a)
                 yield a
 
+    def _addresses_to_check_with_caching(self, show_progress=True):
+        """
+        need this
+        """
+        num_addrs = self._num_addresses_to_check()
+        self._cache = {}
+        seen = {}
+
+        iterable = self._addresses_to_check()
+        if show_progress:
+            iterable = tqdm.tqdm(iterable=iterable, smoothing=0, total=num_addrs,
+                                 desc="ROP", maxinterval=0.5, dynamic_ncols=True)
+
+        for a in iterable:
+            try:
+                bl = self.project.factory.block(a)
+                if bl.size > self.arch.max_block_size:
+                    continue
+                block_data = bl.bytes
+            except (SimEngineError, SimMemoryError):
+                continue
+            if block_data in seen:
+                self._cache[seen[block_data]].add(a)
+                continue
+            else:
+                if self._is_jumpkind_valid(bl.vex.jumpkind) and \
+                        len(bl.vex.constant_jump_targets) == 0 and \
+                        not self._block_has_ip_relative(a, bl):
+                    seen[block_data] = a
+                    self._cache[a] = set()
+                yield a
+
     def _addresses_to_check(self):
         """
         :return: all the addresses to check
@@ -382,7 +416,7 @@ class ROP(Analysis):
             block_size = (self.arch.max_block_size & ((1 << self.project.arch.bits) - alignment)) + alignment
             slices = [(addr-block_size, addr) for addr in self._ret_locations]
             current_addr = 0
-            print("addresses_to_check: ",[hex(a)+' : '+hex(b) for (a,b) in slices])
+            # print("addresses_to_check: ",[hex(a)+' : '+hex(b) for (a,b) in slices])
             for st, _ in slices:
                 current_addr = max(current_addr, st)
                 end_addr = st + block_size + alignment

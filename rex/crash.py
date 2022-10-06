@@ -76,9 +76,11 @@ class BaseCrash:
         else:
             l.info("Collecting ROP gadgets... don't panic if you see tons of error messages!")
             l.info("It may take several minutes to finish...")
+            # embed()
             if angr.misc.testing.is_testing:
                 rop.find_gadgets_single_threaded(show_progress=False)
             else:
+                # rop.find_gadgets_single_threaded(show_progress=False)
                 rop.find_gadgets(show_progress=True)
         self.rop = rop
 
@@ -127,8 +129,13 @@ class BaseCrash:
             self._rop_cache_path = self._get_cache_path(self.binary)
         if not os.path.exists(self._rop_cache_path):
             return
+        # print(self._rop_cache_path)
+        # scores = {}
         with open(self._rop_cache_path, "rb") as f:
+            # HACK:check that the file is not empty first
+            # unpickler = pickle.Unpickler(f)
             self._rop_cache = pickle.load(f)
+            # print(self._rop_cache)
 
     def soft_save_cache(self):
         if not self._rop_cache_path:
@@ -657,6 +664,7 @@ class Crash(CommCrash):
         # rop related initialization
         # NOTE: temporary do not need them
 
+        # REVIEW: temporary do not collect libc gadgets
         self.soft_load_cache()
         self.initialize_rop()
         self.initialize_libc_rop()
