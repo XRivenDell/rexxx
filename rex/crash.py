@@ -69,7 +69,10 @@ class BaseCrash:
 
         # finally, create an angrop object
         rop = self.project.analyses.ROP(fast_mode=self._rop_fast_mode, rebase=False)
-        rop.set_badbytes(self._bad_bytes)
+
+        # FIXME: why badbytes?
+        # rop.set_badbytes(self._bad_bytes)
+
         if self._rop_cache and self._rop_cache[0]:
             l.info("Loading rop gadgets from cache")
             rop._load_cache_tuple(self._rop_cache[0])
@@ -1095,7 +1098,6 @@ class Crash(CommCrash):
         self.state.add_constraints(constraint)
 
         l.debug("constraining input to read from address %#x", read_addr)
-
         l.info("starting a new crash exploration phase based off the crash at address 0x%x", self.violating_action.ins_addr)
 
         new_input = ChallRespInfo.atoi_dumps(self.state)
@@ -1244,7 +1246,7 @@ class Crash(CommCrash):
 
         # TODO: pick the crashing action based off the crashing instruction address,
         # crash fixup attempts will break on this
-        #import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
         for sym_action in symbolic_actions:
             if sym_action.action == "write":
                 if self.state.solver.symbolic(sym_action.data):

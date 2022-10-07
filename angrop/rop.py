@@ -496,7 +496,7 @@ class ROP(Analysis):
         # TODO: Do not use
         Don't understand why handle like this, seems no need to check is_executable protry
         """
-        print("_more_addresses_to_check: ",[hex(a)+' : '+hex(b) for (a,b) in slices])
+        # print("_more_addresses_to_check: ",[hex(a)+' : '+hex(b) for (a,b) in slices])
         for st, ed in slices:
             # print("slices: ",hex(st),hex(ed))
             current_addr = max(current_addr, st)

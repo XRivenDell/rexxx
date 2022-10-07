@@ -582,4 +582,5 @@ if __name__ == "__main__":
     # test_linux_stacksmash_64()
     # test_linux_armel()
     # test_linux_armel_stacksmash_shell()
-    test_linux_armel()
+    # test_linux_armel()
+    test_linux_armel_stacksmash_shell()
