@@ -47,6 +47,9 @@ def _set_global_gadget_analyzer(rop_gadget_analyzer):
 def run_worker(addr):
     return _global_gadget_analyzer.analyze_gadget(addr)
 
+def run_worker_mad(addr):
+    return _global_gadget_analyzer.analyze_gadget_mad(addr)
+
 
 # TODO: what if we have mov eax, [rsp+0x20]; ret (cache would need to know where it is or at least a min/max)
 # TODO: what if we have pop eax; mov ebx, eax; need to encode that we cannot set them to different values
@@ -166,10 +169,7 @@ class ROP(Analysis):
         self._gadgets = []
 
         pool = Pool(processes=processes, initializer=_set_global_gadget_analyzer, initargs=(self._gadget_analyzer,))
-        # waits = self._addresses_to_check_with_caching(show_progress)
-        # print(waits)
         it = pool.imap_unordered(run_worker, self._addresses_to_check_with_caching(show_progress), chunksize=6)
-        # print(".............",it)
         for gadget in it:
             if gadget is not None:
                 if isinstance(gadget, RopGadget):
@@ -198,28 +198,50 @@ class ROP(Analysis):
         Saves gadgets in self.gadgets
         Saves stack pivots in self.stack_pivots
         """
+
+        self._mad_mode = True
         self._initialize_gadget_analyzer()
         self._gadgets = []
         _set_global_gadget_analyzer(self._gadget_analyzer)
   
-        for _, addr in enumerate(self._addresses_to_check_with_caching(show_progress)):
-            l.info("Analyze gadget 0x%x", addr)
-            gadget = _global_gadget_analyzer.analyze_gadget(addr)
-            if gadget is not None:
-                if isinstance(gadget, RopGadget):
-                    self._gadgets.append(gadget)
-                elif isinstance(gadget, StackPivot):
-                    self.stack_pivots.append(gadget)
-        # fix up gadgets from cache
-        for g in self._gadgets:
-            if g.addr in self._cache:
-                dups = {g.addr}
-                for addr in self._cache[g.addr]:
-                    dups.add(addr)
-                    g_copy = g.copy()
-                    g_copy.addr = addr
-                    self._gadgets.append(g_copy)
-                self._duplicates.append(dups)
+        if self._mad_mode:
+            for _, addr in enumerate(self._addresses_to_check_without_caching(show_progress)):
+                l.info("Analyze gadget 0x%x", addr)
+                gadget = _global_gadget_analyzer.analyze_gadget_mad(addr)
+                if gadget is not None:
+                    if isinstance(gadget, RopGadget):
+                        self._gadgets.append(gadget)
+                    elif isinstance(gadget, StackPivot):
+                        self.stack_pivots.append(gadget)
+            # fix up gadgets from cache
+            for g in self._gadgets:
+                if g.addr in self._cache:
+                    dups = {g.addr}
+                    for addr in self._cache[g.addr]:
+                        dups.add(addr)
+                        g_copy = g.copy()
+                        g_copy.addr = addr
+                        self._gadgets.append(g_copy)
+                    self._duplicates.append(dups)
+        else:
+            for _, addr in enumerate(self._addresses_to_check_with_caching(show_progress)):
+                l.info("Analyze gadget 0x%x", addr)
+                gadget = _global_gadget_analyzer.analyze_gadget(addr)
+                if gadget is not None:
+                    if isinstance(gadget, RopGadget):
+                        self._gadgets.append(gadget)
+                    elif isinstance(gadget, StackPivot):
+                        self.stack_pivots.append(gadget)
+            # fix up gadgets from cache
+            for g in self._gadgets:
+                if g.addr in self._cache:
+                    dups = {g.addr}
+                    for addr in self._cache[g.addr]:
+                        dups.add(addr)
+                        g_copy = g.copy()
+                        g_copy.addr = addr
+                        self._gadgets.append(g_copy)
+                    self._duplicates.append(dups)
 
         self._gadgets = sorted(self._gadgets, key=lambda x: x.addr)
 
@@ -591,7 +613,6 @@ class ROP(Analysis):
         :return: all the locations in the binary with a syscall instruction
         TODO: we need to do some spectify work to judge the callee function for each arch?
         """
-
         # try:
         #     return self._get_ret_locations_by_string()
         # except RopException:

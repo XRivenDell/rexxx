@@ -665,10 +665,10 @@ class Crash(CommCrash):
         # NOTE: temporary do not need them
 
         # REVIEW: temporary do not collect libc gadgets
-        self.soft_load_cache()
+        # self.soft_load_cache()
         self.initialize_rop()
-        self.initialize_libc_rop()
-        self.soft_save_cache()
+        # self.initialize_libc_rop()
+        # self.soft_save_cache()
 
     #
     # Public methods

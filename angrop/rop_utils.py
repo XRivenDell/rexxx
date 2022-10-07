@@ -231,7 +231,7 @@ def step_to_unconstrained_successor(project, state, max_steps=2, allow_simproced
             if not allow_simprocedures:# and project.is_hooked(succ.flat_successors[0].addr):
                 # it cannot be a syscall as now syscalls are not explicitly hooked
                 # raise RopException("Skipping simprocedure")
-                print("simprocedure hooked!\n")
+                # print("simprocedure hooked!\n")
                 return succ.flat_successors[0]
             return step_to_unconstrained_successor(project, succ.flat_successors[0],
                                                    max_steps-1, allow_simprocedures)

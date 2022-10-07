@@ -11,7 +11,7 @@ from .rop_gadget import RopGadget, RopMemAccess, RopRegMove, StackPivot
 from .errors import RopException, RegNotFoundException
 
 l = logging.getLogger("angrop.gadget_analyzer")
-# l.setLevel(logging.DEBUG)
+l.setLevel(logging.DEBUG)
 
 from IPython import embed
 from ipdb import set_trace
@@ -72,7 +72,8 @@ class GadgetAnalyzer:
                 return None
 
             # create the gadget
-            this_gadget = RopGadget(addr=addr)
+            this_gadget = RopGadget(addr=addr, cap=self.project.factory.block(addr).capstone, type=gadget_type)
+            # this_gadget = RopGadget(addr=addr)
             # FIXME this doesnt handle multiple steps
             this_gadget.block_length = self.project.factory.block(addr).size
             this_gadget.gadget_type = gadget_type
@@ -211,6 +212,7 @@ class GadgetAnalyzer:
             # self.project.arch
             # HACK: add capstone to ropgadget class
             l.debug('0x%x is successfully generate ropgadget', addr)
+            print(hex(addr), self.project.factory.block(addr))
             this_gadget = RopGadget(addr=addr, cap=self.project.factory.block(addr).capstone, type=gadget_type)
             
             # FIXME: this doesnt handle multiple steps

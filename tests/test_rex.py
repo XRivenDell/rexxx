@@ -513,8 +513,8 @@ def test_linux_armel():
         print("Success")
         crash = rex.Crash(target, inp)
 
-        exploit = crash.exploit()
-        # embed()
+        # exploit = crash.exploit()
+        embed()
 
         # make sure we're able to exploit it in all possible ways
         # assert len(exploit.arsenal) == 3
@@ -563,8 +563,6 @@ def test_linux_armel_stacksmash_shell():
 
         # _check_arsenal_has_send(exploit.arsenal)
 
-
-
 if __name__ == "__main__":
     logging.getLogger("rex").setLevel("DEBUG")
     logging.getLogger("povsim").setLevel("DEBUG")
@@ -583,4 +581,5 @@ if __name__ == "__main__":
 
     # test_linux_stacksmash_64()
     # test_linux_armel()
-    test_linux_armel_stacksmash_shell()
+    # test_linux_armel_stacksmash_shell()
+    test_linux_armel()
