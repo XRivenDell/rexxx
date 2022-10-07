@@ -228,27 +228,10 @@ def test_rop_arm_new():
 
     embed()
 
-def test_rop_arm_new_mad_mode():
-    b = angr.Project(os.path.join(public_bin_location, "vuln_stacksmash_withshell"), load_options={"auto_load_libs": False})
-    rop = b.analyses.ROP(only_check_near_rets=False,mad_mode=True)
-    rop.find_gadgets_single_threaded(show_progress=False)
-
-    embed()
-
-# def test_rop_arm_new_no_near_rets():
-#     b = angr.Project(os.path.join(public_bin_location, "vuln_stacksmash_withshell"), load_options={"auto_load_libs": False})
-#     rop = b.analyses.ROP(only_check_near_rets=False)
-#     rop.find_gadgets_single_threaded(show_progress=False)
-
-#     embed()
-
 def test_httpd():
-    # print("what?")
     # b = angr.Project(os.path.join(public_bin_location, "manysum"), load_options={"auto_load_libs": False})
     b = angr.Project(os.path.join(public_bin_location, "httpd"), load_options={"auto_load_libs": False})
     rop = b.analyses.ROP()
-    # embed()
-    # import ipdb; ipdb.set_trace();
     rop.find_gadgets_single_threaded(show_progress=True)
 
     embed()

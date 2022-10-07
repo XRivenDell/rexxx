@@ -91,12 +91,9 @@ class RopGadget():
     """
     Gadget objects
     """
-    def __init__(self, addr, cap=None, type="default"):
+    def __init__(self, addr, insns=None, type="default"):
         self.addr = addr
-        if isinstance(cap, CapstoneBlock):
-            self.cap = cap
-        else:
-            self.cap = None
+        self.gadget_type = type
         self.changed_regs = set()
         self.popped_regs = set()
         self.concrete_regs = {}
@@ -111,10 +108,10 @@ class RopGadget():
         self.block_length = None
         self.makes_syscall = False
         self.starts_with_syscall = False
-        self.gadget_type = type
         self.jump_reg = None
 
         self.pc_reg = None
+        self.pp = self._ppstr(insns)
 
     @property 
     def is_pc_reg():
@@ -124,14 +121,17 @@ class RopGadget():
     def num_mem_access(self):
         return len(self.mem_reads) + len(self.mem_writes) + len(self.mem_changes)
 
-    def pp(self):
-        return self.cap.pp()
-    
-    def ppstr(self):
+    def _ppstr(self,insns):
         res = ''
-        for ins in self.cap.insns:
-            res += " %s %s; " % (ins.mnemonic, ins.op_str)
-        return res[:len(res)-1]
+        if insns:
+            for ins in insns:
+                res += " %s %s; " % (ins.mnemonic, ins.op_str)
+            return res[:len(res)-1]
+        else:
+            return ""
+
+    def __repr__(self):
+        return "<Gadget %#x>: " % self.addr + self.pp
 
     def __str__(self):
         s = "Gadget %#x\n" % self.addr
@@ -191,13 +191,12 @@ class RopGadget():
             s += "Makes a syscall\n"
         return s
 
-    def __repr__(self):
-        return "<Gadget %#x>: " % self.addr + self.ppstr()
 
     def copy(self):
         out = RopGadget(self.addr)
-        out.cap = self.cap
+        # out.cap = self.cap
         out.addr = self.addr
+        out.gadget_type = self.gadget_type
         out.changed_regs = set(self.changed_regs)
         out.popped_regs = set(self.popped_regs)
         out.concrete_regs = dict(self.concrete_regs)
@@ -212,7 +211,6 @@ class RopGadget():
         out.block_length = self.block_length
         out.makes_syscall = self.makes_syscall
         out.starts_with_syscall = self.starts_with_syscall
-        out.gadget_type = self.gadget_type
         out.jump_reg = self.jump_reg
         out.pc_reg = self.pc_reg
         return out

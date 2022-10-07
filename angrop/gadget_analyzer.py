@@ -72,9 +72,10 @@ class GadgetAnalyzer:
                 return None
 
             # create the gadget
-            this_gadget = RopGadget(addr=addr, cap=self.project.factory.block(addr).capstone, type=gadget_type)
+            this_gadget = RopGadget(addr=addr, insns=self.project.factory.block(addr).capstone.insns, type=gadget_type)
+            # embed()
             # this_gadget = RopGadget(addr=addr)
-            # FIXME this doesnt handle multiple steps
+            # FIXME: this doesnt handle multiple steps
             this_gadget.block_length = self.project.factory.block(addr).size
             this_gadget.gadget_type = gadget_type
 
@@ -212,8 +213,8 @@ class GadgetAnalyzer:
             # self.project.arch
             # HACK: add capstone to ropgadget class
             l.debug('0x%x is successfully generate ropgadget', addr)
-            print(hex(addr), self.project.factory.block(addr))
-            this_gadget = RopGadget(addr=addr, cap=self.project.factory.block(addr).capstone, type=gadget_type)
+            # print(hex(addr), self.project.factory.block(addr))
+            this_gadget = RopGadget(addr=addr, insns=self.project.factory.block(addr).capstone.insns, type=gadget_type)
             
             # FIXME: this doesnt handle multiple steps
             this_gadget.block_length = self.project.factory.block(addr).size

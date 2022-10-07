@@ -50,6 +50,9 @@ def run_worker(addr):
 def run_worker_mad(addr):
     return _global_gadget_analyzer.analyze_gadget_mad(addr)
 
+def run_worker_test(addr):
+    return None
+
 
 # TODO: what if we have mov eax, [rsp+0x20]; ret (cache would need to know where it is or at least a min/max)
 # TODO: what if we have pop eax; mov ebx, eax; need to encode that we cannot set them to different values
@@ -160,16 +163,24 @@ class ROP(Analysis):
 
     def find_gadgets(self, processes=4, show_progress=True):
         """
-        Finds all the gadgets in the binary by calling analyze_gadget on every address near a ret.
+        Finds all the gadgets in the binary by calling analyze_gadget.
         Saves gadgets in self._gadgets
         Saves stack pivots in self.stack_pivots
         :param processes: number of processes to use
         """
+        self._mad_mode = True
         self._initialize_gadget_analyzer()
         self._gadgets = []
 
         pool = Pool(processes=processes, initializer=_set_global_gadget_analyzer, initargs=(self._gadget_analyzer,))
-        it = pool.imap_unordered(run_worker, self._addresses_to_check_with_caching(show_progress), chunksize=6)
+        if self._mad_mode:
+            waits = list(self._addresses_to_check_without_caching(show_progress))
+        else:
+            waits = list(self._addresses_to_check_with_caching(show_progress))
+
+        it = pool.imap_unordered(run_worker, waits, chunksize=6)
+        # embed()
+
         for gadget in it:
             if gadget is not None:
                 if isinstance(gadget, RopGadget):
@@ -347,6 +358,7 @@ class ROP(Analysis):
         return len(filtered_diffs) > 0
 
     def _addresses_to_check_without_caching(self, show_progress=True):
+        self._mad_mode = True
         num_addrs = self._num_addresses_to_check()
         self._cache = {}
         seen = {}
@@ -363,7 +375,7 @@ class ROP(Analysis):
                 l.info('mad_mode: analysis 0x%x' , a)
             else:
                 l.info('general_mode: analysis 0x%x', a)
-            # HACK:add alignment check for arm            
+            # HACK: add alignment check for arm            
             if self.project.arch.name.startswith('ARM') and self.arch.is_thumb is False:
                 if a % (self.arch.alignment*0x2):
                     l.warn("0x%x not a vaild address in ARM", a)
@@ -383,13 +395,13 @@ class ROP(Analysis):
                 self._cache[seen[block_data]].add(a)
                 continue
             else:
-                # if self._is_jumpkind_valid(bl.vex.jumpkind) and \
-                #         len(bl.vex.constant_jump_targets) == 0 and \
-                #         not self._block_has_ip_relative(a, bl):
-                #     seen[block_data] = a
-                #     self._cache[a] = set()
-                # else:
-                #     l.warn("0x%x failed because wtf", a)
+                if self._is_jumpkind_valid(bl.vex.jumpkind) and \
+                        len(bl.vex.constant_jump_targets) == 0 and \
+                        not self._block_has_ip_relative(a, bl):
+                    seen[block_data] = a
+                    self._cache[a] = set()
+                else:
+                    l.warn("0x%x failed because wtf", a)
                 yield a
 
     def _addresses_to_check_with_caching(self, show_progress=True):

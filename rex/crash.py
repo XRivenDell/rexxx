@@ -81,7 +81,7 @@ class BaseCrash:
                 rop.find_gadgets_single_threaded(show_progress=False)
             else:
                 # rop.find_gadgets_single_threaded(show_progress=False)
-                rop.find_gadgets(show_progress=True)
+                rop.find_gadgets(show_progress=False)
         self.rop = rop
 
     def _identify_libc(self):
