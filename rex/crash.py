@@ -70,8 +70,8 @@ class BaseCrash:
         # finally, create an angrop object
         rop = self.project.analyses.ROP(fast_mode=self._rop_fast_mode, rebase=False)
 
-        # FIXME: why badbytes?
-        # rop.set_badbytes(self._bad_bytes)
+        # FIXME: why badbytes failed in TODO: canary enable?
+        rop.set_badbytes(self._bad_bytes)
 
         if self._rop_cache and self._rop_cache[0]:
             l.info("Loading rop gadgets from cache")
@@ -340,7 +340,6 @@ class CommCrash(SimCrash):
 
         # embed()
 
-        # ipdb.set_trace()
         if trace_mode != TraceMode.DUMB and actions:
             raise NotImplementedError("actions only support dumb tracer at the moment")
 
@@ -441,10 +440,8 @@ class CommCrash(SimCrash):
 
     def symbolic_trace(self):
         """
-        # NOTE: What is this doing?
         Symbolically trace the target program with the given input. 
         A NonCrashingInput exception will be raised if the target program does not crash with the given input.
-
         :return: None.
         """
 
@@ -452,7 +449,6 @@ class CommCrash(SimCrash):
         if self.initial_state is None:
             self.initial_state = self._create_initial_state(self._test_case, cgc_flag_page_magic=self.tracer.cgc_flag_page_magic)
 
-        # embed()
         simgr = self.project.factory.simulation_manager(
             self.initial_state,
             save_unsat=False,
@@ -461,8 +457,7 @@ class CommCrash(SimCrash):
         )
 
         # trace symbolically!
-        # since we have already grabbed mapping info through datascoutbow in angr_project_bow, we can assume
-        # there are no aslr slides
+        # since we have already grabbed mapping info through datascoutbow in angr_project_bow, we can assume there are no aslr slides
         forward = isinstance(self.tracer, SimTracer)
         self._t = self.trace_result.tracer_technique(keep_predecessors=2,
                                                      copy_states=False,
@@ -1049,6 +1044,7 @@ class Crash(CommCrash):
 
         :return:    None
         """
+        # import ipdb; ipdb.set_trace();
         self.symbolic_trace()
 
         l.info("Filtering memory writes.")

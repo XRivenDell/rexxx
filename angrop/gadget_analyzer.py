@@ -510,7 +510,7 @@ class GadgetAnalyzer:
         :return: True if the address of symbolic_p is controlled by the stack
         """
         if self._check_if_stack_controls_ast(final_state.ip, init_state):
-            # for MIPs, ip must be right above the current sp. this is to support angrop's current assumption where the
+            # for MIPS, ip must be right above the current sp. this is to support angrop's current assumption where the
             # last instruction must behave like a ret (which is not always the case in MIPS).
             #
             #  This requirement will exclude gadgets like the following::
@@ -767,7 +767,7 @@ class GadgetAnalyzer:
 
     def _check_pivot(self, symbolic_p, symbolic_state, addr):
         """
-        Super basic pivot analysis. pivots are not really used by angrop right now
+        Super basic pivot analysis. pivots are not really REVIEW: used by angrop right now
         :param symbolic_p: the stepped path, symbolic_state is an ancestor of it.
         :param symbolic_state: input state for testing
         :return: the pivot object

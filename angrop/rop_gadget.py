@@ -21,6 +21,14 @@ class RopMemAccess:
         self.addr_size = None
         self.data_size = None
         self.op = None
+    
+    # TODO:add str repr for ROPMem
+    
+    def __str__(self):
+        pass
+    
+    def __repr__(self):
+        pass
 
     def __hash__(self):
         to_hash = sorted(self.addr_dependencies) + sorted(self.data_dependencies) + [self.addr_constant] + \
@@ -83,8 +91,10 @@ class StackPivot:
 
     def __repr__(self):
         return "<Pivot %#x>" % self.addr
+
 """
-HACK: add capstr for RopGadget Class
+DONE: add capstr.insns for RopGadget Class
+pickle do need accept pointer
 """
 
 class RopGadget():
@@ -214,3 +224,12 @@ class RopGadget():
         out.jump_reg = self.jump_reg
         out.pc_reg = self.pc_reg
         return out
+
+def JumpRopgadget(Ropgadget):
+    def __init__(self):
+        return
+
+def CallerRopgadget(Ropgadget):
+    def __init__(self):
+        self.pc_redirect = None
+        return

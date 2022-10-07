@@ -156,7 +156,7 @@ def test_rop_arm():
     # print("what?")
     b = angr.Project(os.path.join(public_bin_location, "manysum"), load_options={"auto_load_libs": False})
     rop = b.analyses.ROP()
-    import ipdb; ipdb.set_trace();
+    # import ipdb; ipdb.set_trace();
     rop.find_gadgets_single_threaded(show_progress=False)
 
 
@@ -218,8 +218,6 @@ def run_all():
             all_functions[f]()
 
 def test_rop_arm_new():
-        # print("what?")
-    # b = angr.Project(os.path.join(public_bin_location, "manysum"), load_options={"auto_load_libs": False})
     b = angr.Project(os.path.join(public_bin_location, "vuln_stacksmash_withshell"), load_options={"auto_load_libs": False})
     rop = b.analyses.ROP()
     # embed()
