@@ -18,7 +18,6 @@ class SimTracer(CrashTracer):
                                  pre_fire_hook=pre_fire_hook, delay=delay, actions=actions, taint=taint)
         # if a coredump is available, save a copy of all registers in the coredump for future references
         assert r.core_path and os.path.isfile(r.core_path)
-        # NOTE: TinyCore: a tinycore dump analysiser
         tiny_core = TinyCore(r.core_path)
         # NOTE: Only collect .qemu_tracer.QemuTraceResult and crash registers for crash analysing
         return r, tiny_core.registers
