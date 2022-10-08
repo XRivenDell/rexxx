@@ -13,7 +13,7 @@ Building...
 4. 阅读CGC插件部分的相关实现，把CGC部分有用的代码或者思想留下，其余cgc部分全部删除
 5. 写出一些其他漏洞Crash类型，(IP_OVERWRITE, PARTIAL_IP_OVERWRITE, BP_OVERWRITE,PARTIAL_BP_OVERWRITE, WRITE_WHAT_WHERE, WRITE_X_WHERE)的例子
 6. 增加其他Crash类型
-7. 增加新的Technique方法
+7. 增加新的Technique方法, 目前简单想到的，格式化字符串,GOT_Overwrite,ROP等
 8. 增加部分启发式方法，当漏洞利用失败时，能够判定失败原因对payload进行部分调整，比如xmm调整栈等
 9. 对Crash部分进行大范围重构
 10. 对Exploit部分进行大范围重构

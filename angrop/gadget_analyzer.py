@@ -156,7 +156,7 @@ class GadgetAnalyzer:
             l.exception(e)
             return None
 
-        l.debug("... Appending gadget!")
+        l.debug("... 0x%x Appending gadget!", addr)
         return this_gadget
 
     # @rop_utils.timeout(3)
@@ -173,6 +173,8 @@ class GadgetAnalyzer:
         # DEBUG: just for debug
         # if addr == 0x104cc or addr==0x104e0:
         #     import ipdb; ipdb.set_trace();
+        # if addr = 0x10414:
+            # import ipdb; ipdb.set_trace()
 
         l.error("0x%x ... analyzing", addr)
         # print()

@@ -488,13 +488,7 @@ def test_linux_stacksmash_32():
         _check_arsenal_has_send(exploit.arsenal)
     embed()
 
-
-
 def test_linux_armel():
-    # Test exploiting a simple linux program with a stack buffer overflow. We should be able to exploit the test binary by
-    # ropping to 'system', calling shellcode in the BSS and calling 'jmpsp' shellcode in the BSS.
-
-    # path = os.path.join(bin_location, "tests/armel")
     path = bin_location
     bin_path = os.path.join(path, "vuln_stacksmash")
     ld_path = os.path.join(path, "ld-linux.so.3")
@@ -502,67 +496,49 @@ def test_linux_armel():
 
     print('cache_location: ', cache_location)
 
-    # print(bin_path,ld_path,libc_path)
-
-    # NOUSE
-    # qemu_command = 'qemu-arm -L %s %s %s' % (bin_path)
     lib_path = path
     inp = b"A" * 227
     with archr.targets.LocalTarget([ld_path, '--library-path', lib_path, bin_path], bin_path, target_arch='arm').build().start() as target:
-        # embed()
         print("Success")
         crash = rex.Crash(target, inp)
 
         # exploit = crash.exploit()
         embed()
 
-        # make sure we're able to exploit it in all possible ways
-        # assert len(exploit.arsenal) == 3
-        # assert 'rop_to_system' in exploit.arsenal
-        # assert 'call_shellcode' in exploit.arsenal
-        # assert 'call_jmp_sp_shellcode' in exploit.arsenal
-
-        # _check_arsenal_has_send(exploit.arsenal)
-
 def test_linux_armel_stacksmash_shell():
-    # Test exploiting a simple linux program with a stack buffer overflow. We should be able to exploit the test binary by
-    # ropping to 'system', calling shellcode in the BSS and calling 'jmpsp' shellcode in the BSS.
-
-    # path = os.path.join(bin_location, "tests/armel")
     path = bin_location
     bin_path = os.path.join(path, "vuln_stacksmash_withshell")
     ld_path = os.path.join(path, "ld-linux.so.3")
     libc_path = os.path.join(path,"libc.so.6")
 
-    # print('cache_location: ', cache_location)
-
-    # print(bin_path,ld_path,libc_path)
-
-    # NOUSE
-    # qemu_command = 'qemu-arm -L %s %s %s' % (bin_path)
     lib_path = path
     inp = b"A" * 0x100
 
     input("Let's go to run "+str(bin_path))
     with archr.targets.LocalTarget([ld_path, '--library-path', lib_path, bin_path], bin_path, target_arch='arm').build().start() as target:
-        # embed()
         print("Success")
         crash = rex.Crash(target, inp)
 
-        # exploit = crash.exploit(
-        #     blacklist_techniques={"ret2shell","rop_to_execl","call_shellcode","call_jmp_sp_shellcode","rop_register_control","rop_to_accept_system","rop_to_system_complicated","ret2libc"}
-        # )
-        # import ipdb; ipdb.set_trace()
         exploit = crash.exploit(whitelist_techniques={"oneshot"})
         embed()
 
-        # make sure we're able to exploit it in all possible ways
-        # assert len(exploit.arsenal) == 3
-        # assert 'rop_to_system' in exploit.arsenal
-        # assert 'call_shellcode' in exploit.arsenal
-        # assert 'call_jmp_sp_shellcode' in exploit.arsenal
+def test_linux_armel_stacksmash_jump():
+    path = bin_location
+    bin_path = os.path.join(path, "vuln_stacksmash_withjump")
+    ld_path = os.path.join(path, "ld-linux.so.3")
+    libc_path = os.path.join(path,"libc.so.6")
 
-        # _check_arsenal_has_send(exploit.arsenal)
+    lib_path = path
+    inp = b"A" * 0x100
+
+    input("Let's go to run "+str(bin_path))
+    with archr.targets.LocalTarget([ld_path, '--library-path', lib_path, bin_path], bin_path, target_arch='arm').build().start() as target:
+        print("Success")
+        crash = rex.Crash(target, inp)
+        exploit = crash.exploit(whitelist_techniques={"call_jmp_sp_shellcode"})
+        # embed()
+        payload = exploit.arsenal['call_jmp_sp_shellcode'].dump()
+        
 
 if __name__ == "__main__":
     logging.getLogger("rex").setLevel("DEBUG")
@@ -584,4 +560,4 @@ if __name__ == "__main__":
     # test_linux_armel()
     # test_linux_armel_stacksmash_shell()
     # test_linux_armel()
-    test_linux_armel_stacksmash_shell()
+    test_linux_armel_stacksmash_jump()

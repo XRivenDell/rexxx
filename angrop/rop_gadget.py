@@ -121,7 +121,13 @@ class RopGadget():
         self.jump_reg = None
 
         self.pc_reg = None
-        self.pp = self._ppstr(insns)
+        self.pp = ''
+        if insns:
+            self.pp = self._ppstr(insns)
+        else:
+            # HACK: Just for debugger
+            print('#################################')
+            import traceback; traceback.print_stack()
 
     @property 
     def is_pc_reg():
@@ -136,7 +142,7 @@ class RopGadget():
         if insns:
             for ins in insns:
                 res += " %s %s; " % (ins.mnemonic, ins.op_str)
-            return res[:len(res)-1]
+            return res
         else:
             return ""
 
@@ -206,6 +212,7 @@ class RopGadget():
         out = RopGadget(self.addr)
         # out.cap = self.cap
         out.addr = self.addr
+        out.pp = self.pp
         out.gadget_type = self.gadget_type
         out.changed_regs = set(self.changed_regs)
         out.popped_regs = set(self.popped_regs)
