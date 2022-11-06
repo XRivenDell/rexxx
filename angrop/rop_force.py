@@ -1,8 +1,6 @@
 from ropgadget.core import Core 
 from ropgadget.args import Args
 
-# from IPython import embed
-
 def GetAddrFromROPgadget(path):
 
   s = ["--binary",path,"--silent","--dump"]
@@ -13,8 +11,6 @@ def GetAddrFromROPgadget(path):
   addr = []
   for g in gs:
     addr.append((g['vaddr'],g['vaddr']+len(g['bytes'])))
-    # print(g)
-
 
   return addr
 

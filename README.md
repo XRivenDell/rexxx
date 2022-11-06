@@ -20,11 +20,19 @@ Building...
 11. 增加绕过ASLR，Canary，PIE的部分，主要先增加通过leak进行交互，泄露，绕过ASLR，Canary等的方法
 
 ### angrop
-1. angrop中重构Gadget的分类(CallerGadget,JumpGadget,RetGadget)
-2. angrop中重构RegSetter中的部分，重构RegGetter,MemSetter,MemGetter
+11月：跑通单次ROP能够利用的Demo,例如`/my_binaries/httpd`
+
+1. angrop中增加Gadget的分类:
+  * 分成CallerGadget(已经大部分实现),JumpGadget,RetGadget(参考CallerGadgets实现,框架已OK)
+  * `block_size`动态，最好就是angr的blocksize(找到最小的  棘手)
+2. angrop中重构RegSetter中的部分
+  * 增加RegGetter,MemSetter,MemGetter
+  * 重构ROPchain部分
 3. angrop.roputils中增加部分execution的部分
-4. 增加plthandler,syshandler等部分
-5. Ropchain 部分大重构
+  * 目前roputils中是几个非常重要的符号执行函数，但是实现的都比较简陋，需要先封装成class
+  * 增加对library/syscall/syscenter等的处理逻辑不够
+  * 增加plthandler,syshandler,参考实现PLTHandler(这部分需要angr支持)
+4. Ropchain部分大重构
 
 ### aflqemu
 1. 增加aflqemu中的交互部分，能够读取leaked的信息，实现input-output的交互

@@ -521,6 +521,7 @@ def test_linux_armel_stacksmash_shell():
 
         exploit = crash.exploit(whitelist_techniques={"oneshot"})
         embed()
+        payload = exploit.arsenal['oneshot'].dump()
 
 def test_linux_armel_stacksmash_jump():
     path = bin_location
@@ -536,9 +537,9 @@ def test_linux_armel_stacksmash_jump():
         print("Success")
         crash = rex.Crash(target, inp)
         exploit = crash.exploit(whitelist_techniques={"call_jmp_sp_shellcode"})
-        # embed()
+        embed()
         payload = exploit.arsenal['call_jmp_sp_shellcode'].dump()
-        
+
 
 if __name__ == "__main__":
     logging.getLogger("rex").setLevel("DEBUG")
@@ -559,5 +560,6 @@ if __name__ == "__main__":
     # test_linux_stacksmash_64()
     # test_linux_armel()
     # test_linux_armel_stacksmash_shell()
+    # embed()
     # test_linux_armel()
     test_linux_armel_stacksmash_jump()

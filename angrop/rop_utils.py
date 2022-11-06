@@ -121,7 +121,6 @@ def fast_unconstrained_check(state, ast):
 
     return unconstrained_check(state, ast)
 
-
 def get_reg_name(arch, reg_offset):
     """
     :param reg_offset: Tries to find the name of a register given the offset in the registers.
