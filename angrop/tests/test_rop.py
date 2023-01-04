@@ -234,6 +234,20 @@ def test_httpd():
 
     embed()
 
+def test_test():
+    b = angr.Project("/mnt/d/DOWNLOADS/test", load_options={"auto_load_libs": False})
+    rop = b.analyses.ROP()
+    rop.find_gadgets_single_threaded(show_progress=True)
+
+    embed()
+
+def test_r7000p_netgear(bin):
+    b = angr.Project(os.path.join(public_bin_location,bin), load_options={"auto_load_libs": False})
+    rop = b.analyses.ROP()
+    rop.find_gadgets_single_threaded(show_progress=True)
+
+    embed()
+
 
 if __name__ == "__main__":
     logging.getLogger("angrop.rop").setLevel(logging.DEBUG)
@@ -251,5 +265,7 @@ if __name__ == "__main__":
     #     test_rop_arm_new_mad_mode()
     # else:
     #     test_rop_arm_new()
-    test_rop_arm_new_mad_mode()
+    # test_rop_arm_new_mad_mode()
+    # test_test()
+    test_r7000p_netgear('r7000p-httpd')
 

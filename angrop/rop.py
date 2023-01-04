@@ -214,7 +214,7 @@ class ROP(Analysis):
         self._initialize_gadget_analyzer()
         self._gadgets = []
         _set_global_gadget_analyzer(self._gadget_analyzer)
-  
+
         if self._mad_mode:
             for _, addr in enumerate(self._addresses_to_check_without_caching(show_progress)):
                 l.info("Analyze gadget 0x%x", addr)
@@ -375,7 +375,7 @@ class ROP(Analysis):
                 l.info('mad_mode: analysis 0x%x' , a)
             else:
                 l.info('general_mode: analysis 0x%x', a)
-            # HACK: add alignment check for arm            
+            # HACK: add alignment check for arm
             if self.project.arch.name.startswith('ARM') and self.arch.is_thumb is False:
                 if a % (self.arch.alignment*0x2):
                     l.warn("0x%x not a vaild address in ARM", a)
@@ -395,6 +395,20 @@ class ROP(Analysis):
                 self._cache[seen[block_data]].add(a)
                 continue
             else:
+                """my-binarys/test
+                INFO    | 2022-11-29 21:09:30,855 | angrop.rop | mad_mode: analysis 0x1042c
+                DEBUG   | 2022-11-29 21:09:30,855 | angrop.rop | 0x1042c successfully create project.factory.block size: 0x8
+                WARNING | 2022-11-29 21:09:30,855 | angrop.rop | 0x1042c failed because wtf
+                INFO    | 2022-11-29 21:09:30,855 | angrop.rop | Analyze gadget 0x1042c
+                ERROR   | 2022-11-29 21:09:30,855 | angrop.gadget_analyzer | 0x1042c ... analyzing
+                DEBUG   | 2022-11-29 21:09:30,855 | angrop.gadget_analyzer | 0x1042c ... checking if block makes sense
+                DEBUG   | 2022-11-29 21:09:30,855 | angrop.gadget_analyzer | 0x102f8 ... checking if block makes sense
+                DEBUG   | 2022-11-29 21:09:30,863 | angrop.gadget_analyzer | 0x1042c ... analyzing rop potential of block
+                DEBUG   | 2022-11-29 21:09:30,863 | angrop.gadget_analyzer | 0x1042c ... check for controlled successor
+                DEBUG   | 2022-11-29 21:09:30,863 | angrop.gadget_analyzer | 0x1042c is successfully generate ropgadget
+                DEBUG   | 2022-11-29 21:09:30,863 | angrop.gadget_analyzer | 0x1042c ... computing sp change
+                DEBUG   | 2022-11-29 21:09:30,896 | angrop.gadget_analyzer | stack change isn't positive
+                """
                 if self._is_jumpkind_valid(bl.vex.jumpkind) and \
                         len(bl.vex.constant_jump_targets) == 0 and \
                         not self._block_has_ip_relative(a, bl):
@@ -470,7 +484,7 @@ class ROP(Analysis):
                     l.debug("Analyzing segment with address range: 0x%x, 0x%x" % (segment.min_addr, segment.max_addr))
                     for addr in range(segment.min_addr, segment.max_addr):
                         yield addr
-                        
+
     def _more_addresses_to_check(self):
         """
         :return: all the addresses to check contain ropgadgets results
@@ -521,7 +535,7 @@ class ROP(Analysis):
     def _address_from_ropforce(self):
         addrs = GetAddrFromROPgadget(self.project.filename)
         return addrs
-    
+
     def _num_addresses_to_check(self):
         if self._only_check_near_rets:
             # TODO: This could probably be optimized further by fewer segments checks (i.e. iterating for segments and
@@ -537,7 +551,7 @@ class ROP(Analysis):
                 if segment.is_executable:
                     num += (segment.max_addr - segment.min_addr)
             return num
-                        
+
     def _get_ret_locations(self):
         """
         :return: all the locations in the binary with a ret instruction
@@ -619,7 +633,7 @@ class ROP(Analysis):
         #             except (SimEngineError, SimMemoryError):
         #                 pass
         return sorted(addrs)
-    
+
     def _get_syscall_locations(self):
         """
         :return: all the locations in the binary with a syscall instruction

